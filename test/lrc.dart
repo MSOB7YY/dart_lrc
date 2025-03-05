@@ -34,4 +34,19 @@ void main() {
     final parsed = Lrc.parse(multiLanguageSyncedLrc);
     expect(parsed.lyrics.length, 16);
   });
+
+  test('clean plain lyrics', () {
+    const plainLyrics = '''[ti:Space Song]
+[ar:Beach House]
+[by:Generated using SongSync]
+It was late at night, you held on tight
+From an empty seat, a flash of light
+It will take a while to make you smile
+Somewhere in these eyes, I'm on your side
+''';
+
+    final cleaned = Lrc.cleanPlainLyrics(plainLyrics);
+
+    expect(cleaned.startsWith('It was late'), true);
+  });
 }

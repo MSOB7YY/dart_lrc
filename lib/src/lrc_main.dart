@@ -272,6 +272,12 @@ class Lrc {
   static bool isValid(String input) =>
       RegExp(r'[\d{1,}:\d{1,}(\.\d{1,})?\].*)[\r\n]').hasMatch(input);
 
+  static String cleanPlainLyrics(String input) {
+    final regex = RegExp(
+        r'([\r\n]*\[((ti)|(a[rlu])|(by)|([rv]e)|(length)|(offset)|(la)):.+\][\r\n]*)');
+    return input.replaceAll(regex, '');
+  }
+
   @override
   String toString() {
     var lyrics = this.lyrics.join('\n');
