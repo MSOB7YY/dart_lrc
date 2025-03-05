@@ -202,7 +202,8 @@ class Lrc {
             'lyrics': lyric.substring(2) // get the rest of the lyrics
           };
           lineType = LrcTypes.extended;
-        } else if (lyric.contains(RegExp(r'<\d\d:\d\d\.\d\d>'))) {
+        } else if (lyric
+            .contains(RegExp(r'<[0-9]{1,}:[0-9]{1,}(\.[0-9]{1,})?>'))) {
           // if enhanced
           type = (type == LrcTypes.extended)
               ? LrcTypes.extended_enhanced
@@ -211,8 +212,9 @@ class Lrc {
           lineType = LrcTypes.enhanced;
           // for each timestamp in the line, regex has capturing
           // groups to make this easier
-          for (var j in RegExp(r'<((\d\d):(\d\d)\.(\d\d))>([^<]+)')
-              .allMatches(lyric)) {
+          for (var j
+              in RegExp(r'<(([0-9]{1,}):([0-9]{1,})(\.([0-9]{1,}))?)>([^<]+)')
+                  .allMatches(lyric)) {
             // puts each timestamp+lyrics in the args, no duplicates
             args.putIfAbsent(
               j.group(1)!, //the key is the <mm:ss.xx>

@@ -6,11 +6,14 @@ void main() {
     const multiTimestampedSyncedLrc = '''[00:11.86]Line 1 lyrics
 [00:24]Line 2 lyrics
 [00:29.02][00:44.02]Line 3 lyrics
-[00:29][00:31.1] Line 4 lyrics''';
+[00:29][00:31.1] Line 4 lyrics
+[102:29][104:31.1] Line 5 lyrics
+[202:30] Line 6 lyrics
+''';
 
     final parsed = Lrc.parse(multiTimestampedSyncedLrc);
 
-    expect(parsed.lyrics.length, 6);
+    expect(parsed.lyrics.length, 9);
   });
 
   test('multi language lrc parsing', () {
