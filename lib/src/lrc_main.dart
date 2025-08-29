@@ -158,7 +158,9 @@ class Lrc {
         language;
     LrcTypes? type;
     var lyrics = <LrcLine>[];
-    var maxMultiTimestampCountInALine = 0;
+
+    var registeredTimestamps = <Duration>{};
+    var shouldSortLyrics = false;
 
     String? setIfMatchTag(String toMatch, String tag) =>
         (RegExp(r'^\[' + tag + r':.*\]$').hasMatch(toMatch))
@@ -187,8 +189,16 @@ class Lrc {
         final lyric = lrclineDetails.lineText;
         final timestamps = lrclineDetails.timestamps;
 
-        if (timestamps.length > maxMultiTimestampCountInALine) {
-          maxMultiTimestampCountInALine = timestamps.length;
+        if (shouldSortLyrics == false) {
+          if (timestamps.length > 1) {
+            // -- means it has multi timestamps
+            shouldSortLyrics = true;
+          }
+          if (timestamps
+              .any((element) => registeredTimestamps.contains(element))) {
+            // -- means it has multi language in the end of the file
+            shouldSortLyrics = true;
+          }
         }
 
         // checkers for different types of LRCs
@@ -235,6 +245,7 @@ class Lrc {
         for (var i = 0; i < lyricSplit.length; i++) {
           final part = lyricSplit[i];
           for (final linetimestamp in timestamps) {
+            registeredTimestamps.add(linetimestamp);
             lyrics.add(LrcLine(
               timestamp: linetimestamp,
               lyrics: part,
@@ -246,8 +257,7 @@ class Lrc {
       }
     }
 
-    final hadMultiTimestamps = maxMultiTimestampCountInALine > 1;
-    if (hadMultiTimestamps) {
+    if (shouldSortLyrics) {
       lyrics.sort((a, b) =>
           a.timestamp.inMicroseconds.compareTo(b.timestamp.inMicroseconds));
     }
