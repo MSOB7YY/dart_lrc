@@ -154,8 +154,6 @@ class Lrc {
   /// Parses an LRC from a string. Throws a `FormatExeption`
   /// if the inputted string is not valid.
   static Lrc parse(String parsed) {
-    parsed = parsed.trim();
-
     if (!isValid(parsed)) {
       throw FormatException('The inputted string is not a valid LRC file');
     }
@@ -323,7 +321,7 @@ class Lrc {
 
   /// Checks if the string [input] is a valid LRC using Regex.
   static bool isValid(String input) =>
-      RegExp(r'[\d{1,}:\d{1,}(\.\d{1,})?\].*)[\r\n]').hasMatch(input);
+      RegExp(r'\[(\d{1,}).+\]').hasMatch(input);
 
   static String cleanPlainLyrics(String input) {
     final regex = RegExp(
