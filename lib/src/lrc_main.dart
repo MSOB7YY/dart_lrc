@@ -6,61 +6,63 @@ part 'multi_timestamp_parser.dart';
 /// or parse a string using `Lrc.parse()`.
 class Lrc {
   /// The overall type of LRC for this object
-  LrcTypes type;
+  final LrcTypes type;
 
   /// The name of the artist of the song (optional)
   ///
   /// This corresponds to the ID tag `[ar:]`.
-  String? artist;
+  final String? artist;
 
   /// The name of the album of the song (optional)
   ///
   /// This corresponds to the ID tag `[al:]`.
-  String? album;
+  final String? album;
 
   /// The title of the song (optional)
   ///
   /// This corresponds to the ID tag `[ti:]`.
-  String? title;
+  final String? title;
 
   /// The name of the author of the lyrics (optional)
   ///
   /// This corresponds to the ID tag `[au:]`.
-  String? author;
+  final String? author;
 
   /// The name of the creator of the LRC file (optional)
   ///
   /// This corresponds to the ID tag `[by:]`.
-  String? creator;
+  final String? creator;
 
   /// The name of the program that created the LRC file (optional)
   ///
   /// This corresponds to the ID tag `[re:]`.
-  String? program;
+  final String? program;
 
   /// The version of the program that created the LRC file (optional)
   ///
   /// This corresponds to the ID tag `[ve:]`.
-  String? version;
+  final String? version;
 
   /// The length of the song (optional)
   ///
   /// This corresponds to the ID tag `[length:]`.
-  String? length;
+  final String? length;
 
   /// The language of the song, using an IETF BCP 47 language tag (optional)
   ///
   /// This corresponds to the ID tag `[la:]`.
-  String? language;
+  final String? language;
 
   /// Offset of time in milliseconds, can be positive [shifts time up]
   /// or negative [shifts time down] (optional)
   ///
   /// This corresponds to the ID tag `[offset:]`.
-  int? offset;
+  final int? offset;
 
   /// The list of lyric lines
-  List<LrcLine> lyrics;
+  final List<LrcLine> lyrics;
+
+  final int personCount;
 
   /// Handy parameter to get a stream of the lyrics.
   /// See `List<LrcLine>.toStream()`.
@@ -68,7 +70,7 @@ class Lrc {
 
   /// Use this constructor if you want to manually create an LRC from scratch.
   /// Otherwise, parse an LRC string using [Lrc.parse].
-  Lrc({
+  const Lrc({
     this.type = LrcTypes.simple,
     required this.lyrics,
     this.artist,
@@ -81,6 +83,7 @@ class Lrc {
     this.length,
     this.offset,
     this.language,
+    this.personCount = 1,
   });
 
   /// Format the lrc to a readable string that can then be
@@ -133,6 +136,21 @@ class Lrc {
     return lyric.split(RegExp(r'(\s{2,}|\|)(?=\S)'));
   }
 
+  static Iterable<LrcLinePart> extractTimeStampPartFromLine(String line) sync* {
+    for (var j in RegExp(r'<(([0-9]{1,}):([0-9]{1,})\.([0-9]{1,})?)>([^<]+)')
+        .allMatches(line)) {
+      final timestamp = Duration(
+        minutes: int.tryParse(j.group(2)!) ?? 0,
+        seconds: int.tryParse(j.group(3)!) ?? 0,
+        milliseconds: (int.tryParse(j.group(4)!) ?? 0),
+      );
+      yield LrcLinePart(
+        timestamp: timestamp,
+        lyrics: j.group(5)?.trim() ?? '',
+      );
+    }
+  }
+
   /// Parses an LRC from a string. Throws a `FormatExeption`
   /// if the inputted string is not valid.
   static Lrc parse(String parsed) {
@@ -159,6 +177,7 @@ class Lrc {
     LrcTypes? type;
     var lyrics = <LrcLine>[];
 
+    final personToIndex = <String, int>{};
     var registeredTimestamps = <Duration>{};
     var shouldSortLyrics = false;
 
@@ -183,7 +202,7 @@ class Lrc {
 
       if (_LRCMultiTimestampParser._durRegex.hasMatch(l)) {
         var lineType = LrcTypes.simple;
-        Map<String, Object>? args;
+        List<LrcLinePart>? parts;
 
         final lrclineDetails = _LRCMultiTimestampParser.parseLine(l);
         final lyric = lrclineDetails.lineText;
@@ -201,16 +220,24 @@ class Lrc {
           }
         }
 
+        int? person;
+
         // checkers for different types of LRCs
         if (lyric.contains(RegExp(r'^\w:'))) {
           //if extended
           type = (type == LrcTypes.enhanced)
               ? LrcTypes.extended_enhanced
               : LrcTypes.extended;
-          args = {
-            'letter': lyric[0], // get the letter of the type of person
-            'lyrics': lyric.substring(2) // get the rest of the lyrics
-          };
+
+          final personText = lyric[0];
+          person = personToIndex[personText] ??= personToIndex.length + 1;
+
+          parts = [];
+          parts.add(LrcLinePart(
+            timestamp: timestamps.first,
+            lyrics: lyric.substring(2),
+          ));
+
           lineType = LrcTypes.extended;
         } else if (lyric
             .contains(RegExp(r'<[0-9]{1,}:[0-9]{1,}(\.[0-9]{1,})?>'))) {
@@ -218,42 +245,53 @@ class Lrc {
           type = (type == LrcTypes.extended)
               ? LrcTypes.extended_enhanced
               : LrcTypes.enhanced;
-          args = {};
+          parts = [];
           lineType = LrcTypes.enhanced;
-          // for each timestamp in the line, regex has capturing
-          // groups to make this easier
-          for (var j
-              in RegExp(r'<(([0-9]{1,}):([0-9]{1,})(\.([0-9]{1,}))?)>([^<]+)')
-                  .allMatches(lyric)) {
-            // puts each timestamp+lyrics in the args, no duplicates
-            args.putIfAbsent(
-              j.group(1)!, //the key is the <mm:ss.xx>
-              () => <String, Object>{
-                // the value is another map with the duration and lyrics
-                'duration': Duration(
-                  minutes: int.parse(j.group(2)!),
-                  seconds: int.parse(j.group(3)!),
-                  milliseconds: int.parse(j.group(4)!) * 10,
-                ),
-                'lyrics': j.group(5)!.trim()
-              },
-            );
-          }
+
+          final personText = lyric.substring(0, lyric.indexOf('<'));
+          person = personToIndex[personText] ??= personToIndex.length + 1;
+
+          parts.addAll(extractTimeStampPartFromLine(lyric));
         }
 
         final lyricSplit = splitMultiLanguageLine(lyric);
         for (var i = 0; i < lyricSplit.length; i++) {
           final part = lyricSplit[i];
+          final readableText = parts != null && parts.isNotEmpty
+              ? parts.map((e) => e.lyrics).join(' ')
+              : part;
           for (final linetimestamp in timestamps) {
             registeredTimestamps.add(linetimestamp);
             lyrics.add(LrcLine(
               timestamp: linetimestamp,
               lyrics: part,
+              readableText: readableText.isNotEmpty ? readableText : part,
               type: lineType,
-              args: args,
+              parts: parts,
+              person: person,
             ));
           }
         }
+      }
+    }
+
+    if (type == LrcTypes.enhanced || type == LrcTypes.extended_enhanced) {
+      // extract bg tags
+      for (final m in RegExp(r'\[bg:(.*)\]').allMatches(parsed)) {
+        final text = m.group(1);
+        if (text == null) continue;
+        final parts = extractTimeStampPartFromLine(text).toList();
+        if (parts.isEmpty) continue;
+        final newLine = LrcLine(
+          timestamp: parts[0].timestamp,
+          lyrics: text,
+          readableText: parts.map((e) => e.lyrics).join(' '),
+          type: type ?? LrcTypes.enhanced,
+          parts: parts,
+          person: 0,
+        );
+        lyrics.add(newLine);
+        shouldSortLyrics = true;
       }
     }
 
@@ -261,6 +299,10 @@ class Lrc {
       lyrics.sort((a, b) =>
           a.timestamp.inMicroseconds.compareTo(b.timestamp.inMicroseconds));
     }
+
+    var personCount =
+        personToIndex.values.where((element) => element > 0).length;
+    if (personCount <= 0) personCount = 1;
 
     return Lrc(
       type: type ?? LrcTypes.simple,
@@ -275,6 +317,7 @@ class Lrc {
       version: version,
       lyrics: lyrics,
       language: language,
+      personCount: personCount,
     );
   }
 
@@ -326,23 +369,41 @@ enum LrcTypes {
 ///A line of lyrics, with its defined duration and raw lyrics
 class LrcLine {
   ///timestamp for the lyrics wherein it'll be displayed
-  Duration timestamp;
+  final Duration timestamp;
 
   ///the raw lyrics for the line
-  String lyrics;
+  final String lyrics;
 
-  ///the additional arguments for other lrc types
-  Map<String, Object>? args;
+  final String readableText;
+
+  final List<LrcLinePart>? parts;
 
   ///the type of lrc for this line
-  LrcTypes type;
+  final LrcTypes type;
 
-  LrcLine({
+  final int? person;
+
+  bool get isBGLyrics => person == 0;
+
+  const LrcLine({
     required this.timestamp,
     required this.lyrics,
+    required this.readableText,
     required this.type,
-    this.args,
+    required this.parts,
+    required this.person,
   });
+
+  LrcLine withTimeStamp({required Duration newTimestamp}) {
+    return LrcLine(
+      timestamp: newTimestamp,
+      lyrics: lyrics,
+      readableText: readableText,
+      type: type,
+      person: person,
+      parts: parts,
+    );
+  }
 
   ///get the string for a formatted line
   String get formattedLine {
@@ -362,7 +423,26 @@ class LrcLine {
     return '''
       Timestamp: '$timestamp'
       Lyrics: '$lyrics'
-      Args: '$args'
+      Parts: '$parts'
+      Person: '$person'
+    ''';
+  }
+}
+
+class LrcLinePart {
+  final Duration timestamp;
+  final String lyrics;
+
+  const LrcLinePart({
+    required this.timestamp,
+    required this.lyrics,
+  });
+
+  @override
+  String toString() {
+    return '''
+      Timestamp: '$timestamp'
+      Lyrics: '$lyrics'
     ''';
   }
 }
