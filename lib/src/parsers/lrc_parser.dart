@@ -27,18 +27,38 @@ class LrcParser {
     return lyric.split(RegExp(r'(\s{2,}|\|)(?=\S)'));
   }
 
-  static Iterable<LrcLinePart> extractTimeStampPartFromLine(String line) sync* {
-    for (var j in RegExp(r'<(([0-9]{1,}):([0-9]{1,})\.([0-9]{1,})?)>([^<]+)')
+  static Iterable<LrcLinePart> extractTimeStampPartFromLine(String line,
+      {Duration? startTimeStamp}) sync* {
+    var isFirst = true;
+    var latestTimeStamp = startTimeStamp;
+    for (var j in RegExp(r'([^<\]]*)<(([0-9]{1,}):([0-9]{1,})\.([0-9]{1,})?)>')
         .allMatches(line)) {
-      final timestamp = Duration(
-        minutes: int.tryParse(j.group(2)!) ?? 0,
-        seconds: int.tryParse(j.group(3)!) ?? 0,
-        milliseconds: (int.tryParse(j.group(4)!) ?? 0),
+      final lyrics = j.group(1) ?? '';
+      final endTimestamp = Duration(
+        minutes: int.tryParse(j.group(3)!) ?? 0,
+        seconds: int.tryParse(j.group(4)!) ?? 0,
+        milliseconds: (int.tryParse(j.group(5)!) ?? 0),
       );
+      final startTimestamp = latestTimeStamp;
+      latestTimeStamp = endTimestamp;
+      if (startTimestamp == null) {
+        // we set the start for the next part
+        continue;
+      }
+      if (isFirst) {
+        // -- skip first part that has `v1:` etc
+        if (lyrics.length < 5 &&
+            lyrics.startsWith('v') &&
+            (lyrics.endsWith(':') || lyrics.endsWith(': '))) {
+          continue;
+        }
+      }
       yield LrcLinePart(
-        timestamp: timestamp,
-        lyrics: j.group(5)?.trim() ?? '',
+        startTimestamp: startTimestamp,
+        endTimestamp: endTimestamp,
+        lyrics: lyrics,
       );
+      isFirst = false;
     }
   }
 
@@ -123,7 +143,8 @@ class LrcParser {
 
           parts = [];
           parts.add(LrcLinePart(
-            timestamp: timestamps.first,
+            startTimestamp: timestamps.first,
+            endTimestamp: timestamps.first,
             lyrics: lyric.substring(2),
           ));
 
@@ -137,24 +158,37 @@ class LrcParser {
           parts = [];
           lineType = LrcTypes.enhanced;
 
-          final personText = lyric.substring(0, lyric.indexOf('<'));
-          person = personToIndex[personText] ??= personToIndex.length + 1;
+          final indexOfLT = lyric.indexOf('<');
+          final personText = indexOfLT < 0 ? '' : lyric.substring(0, indexOfLT);
+          person = personToIndex[personText] ??= personText.startsWith('v1:')
+              ? 1
+              : personText.startsWith('v2:')
+                  ? 2
+                  : personText.startsWith('v3:')
+                      ? 3
+                      : personToIndex.length + 1;
 
-          parts.addAll(extractTimeStampPartFromLine(lyric));
+          parts.addAll(
+            extractTimeStampPartFromLine(
+              lyric,
+              startTimeStamp: timestamps.first,
+            ),
+          );
         }
 
         final lyricSplit = splitMultiLanguageLine(lyric);
         for (var i = 0; i < lyricSplit.length; i++) {
-          final part = lyricSplit[i];
+          var lyric = lyricSplit[i];
+          if (lyric.length < 5 && lyric.startsWith('v3:')) lyric = '';
           final readableText = parts != null && parts.isNotEmpty
-              ? parts.map((e) => e.lyrics).join(' ')
-              : part;
+              ? parts.map((e) => e.lyrics).join()
+              : lyric;
           for (final linetimestamp in timestamps) {
             registeredTimestamps.add(linetimestamp);
             lyrics.add(LrcLine(
               timestamp: linetimestamp,
-              lyrics: part,
-              readableText: readableText.isNotEmpty ? readableText : part,
+              lyrics: lyric,
+              readableText: readableText.isNotEmpty ? readableText : lyric,
               type: lineType,
               parts: parts,
               person: person,
@@ -172,9 +206,9 @@ class LrcParser {
         final parts = extractTimeStampPartFromLine(text).toList();
         if (parts.isEmpty) continue;
         final newLine = LrcLine(
-          timestamp: parts[0].timestamp,
+          timestamp: parts[0].startTimestamp,
           lyrics: text,
-          readableText: parts.map((e) => e.lyrics).join(' '),
+          readableText: parts.map((e) => e.lyrics).join(),
           type: type ?? LrcTypes.enhanced,
           parts: parts,
           person: 0,

@@ -1,18 +1,21 @@
 part of lrc;
 
 class LrcLinePart {
-  final Duration timestamp;
+  final Duration startTimestamp;
+  final Duration endTimestamp;
   final String lyrics;
 
   const LrcLinePart({
-    required this.timestamp,
+    required this.startTimestamp,
+    required this.endTimestamp,
     required this.lyrics,
   });
 
   @override
   String toString() {
     return '''
-      Timestamp: '$timestamp'
+      startTimestamp: '$startTimestamp'
+      endTimestamp: '$endTimestamp'
       Lyrics: '$lyrics'
     ''';
   }
