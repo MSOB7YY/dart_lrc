@@ -1,4 +1,4 @@
-part of 'lrc_main.dart';
+part of lrc;
 
 /// Parses Multi-timestamped lyrics lines effectively.
 class _LRCMultiTimestampParser {
