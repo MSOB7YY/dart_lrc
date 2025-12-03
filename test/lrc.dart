@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:test/test.dart';
 
 import 'package:lrc/lrc.dart';
@@ -68,8 +70,28 @@ It will take a while to make you smile
 Somewhere in these eyes, I'm on your side
 ''';
 
-    final cleaned = Lrc.cleanPlainLyrics(plainLyrics);
+    final cleaned = LrcParser.cleanPlainLyrics(plainLyrics);
 
     expect(cleaned.startsWith('It was late'), true);
+  });
+
+  test('word synced lyrics', () {
+    final file = File(r'test\files\timed_lrc.lrc');
+    final parsed = Lrc.parse(file.readAsStringSync());
+
+    expect(parsed.lyrics.length, 89);
+    expect(parsed.lyrics[0].parts?.length, 12);
+    expect(parsed.lyrics[0].readableText,
+        'Look at ya, look at ya, look at ya, look at ya');
+  });
+
+  test('ttml lyrics', () async {
+    final file = File(r'test\files\ttml_lrc.xml');
+    final parsed = TtmlParser.parse(file.readAsStringSync());
+    print(parsed.lyrics[0].parts);
+
+    expect(parsed.lyrics.length, 57);
+    expect(parsed.lyrics[0].parts?.length, 8);
+    expect(parsed.lyrics[0].readableText, "They say I'm too young to love you");
   });
 }
