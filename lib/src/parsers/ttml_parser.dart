@@ -35,8 +35,9 @@ class TtmlParser {
             LrcParser.extractTimeStampPartFromLine(textNormalized).toList();
         final lineType = parts.isNotEmpty ? LrcTypes.enhanced : LrcTypes.simple;
         if (lineType == LrcTypes.enhanced) type = LrcTypes.enhanced;
-        final lrcLine = LrcLine(
+        lrcLines.add(LrcLine(
           timestamp: Duration(milliseconds: startMS),
+          originalIndex: lrcLines.length,
           lyrics: textNormalized,
           readableText: parts.isNotEmpty
               ? parts.map((e) => e.lyrics).join()
@@ -44,8 +45,7 @@ class TtmlParser {
           type: lineType,
           parts: parts,
           person: person,
-        );
-        lrcLines.add(lrcLine);
+        ));
       }
     }
 

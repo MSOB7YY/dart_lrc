@@ -187,6 +187,7 @@ class LrcParser {
             registeredTimestamps.add(linetimestamp);
             lyrics.add(LrcLine(
               timestamp: linetimestamp,
+              originalIndex: lyrics.length,
               lyrics: lyric,
               readableText: readableText.isNotEmpty ? readableText : lyric,
               type: lineType,
@@ -205,22 +206,28 @@ class LrcParser {
         if (text == null) continue;
         final parts = extractTimeStampPartFromLine(text).toList();
         if (parts.isEmpty) continue;
-        final newLine = LrcLine(
+        lyrics.add(LrcLine(
           timestamp: parts[0].startTimestamp,
+          originalIndex: lyrics.length,
           lyrics: text,
           readableText: parts.map((e) => e.lyrics).join(),
           type: type ?? LrcTypes.enhanced,
           parts: parts,
           person: 0,
-        );
-        lyrics.add(newLine);
+        ));
         shouldSortLyrics = true;
       }
     }
 
     if (shouldSortLyrics) {
-      lyrics.sort((a, b) =>
-          a.timestamp.inMicroseconds.compareTo(b.timestamp.inMicroseconds));
+      lyrics.sort((a, b) {
+        final res =
+            a.timestamp.inMicroseconds.compareTo(b.timestamp.inMicroseconds);
+        if (res == 0) {
+          return a.originalIndex.compareTo(b.originalIndex);
+        }
+        return res;
+      });
     }
 
     var personCount =

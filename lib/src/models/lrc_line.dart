@@ -5,6 +5,8 @@ class LrcLine {
   ///timestamp for the lyrics wherein it'll be displayed
   final Duration timestamp;
 
+  final int originalIndex;
+
   ///the raw lyrics for the line
   final String lyrics;
 
@@ -21,6 +23,7 @@ class LrcLine {
 
   const LrcLine({
     required this.timestamp,
+    required this.originalIndex,
     required this.lyrics,
     required this.readableText,
     required this.type,
@@ -31,6 +34,7 @@ class LrcLine {
   LrcLine withTimeStamp({required Duration newTimestamp}) {
     return LrcLine(
       timestamp: newTimestamp,
+      originalIndex: originalIndex,
       lyrics: lyrics,
       readableText: readableText,
       type: type,
@@ -56,6 +60,7 @@ class LrcLine {
   String toString() {
     return '''
       Timestamp: '$timestamp'
+      OriginalIndex: '$originalIndex'
       Lyrics: '$lyrics'
       Parts: '$parts'
       Person: '$person'
