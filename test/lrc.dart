@@ -82,16 +82,25 @@ Somewhere in these eyes, I'm on your side
     expect(parsed.lyrics.length, 89);
     expect(parsed.lyrics[0].parts?.length, 12);
     expect(parsed.lyrics[0].readableText,
-        'Look at ya, look at ya, look at ya, look at ya');
+        'Look at ya, look at ya, look at ya, look at ya ');
   });
 
   test('ttml lyrics', () async {
     final file = File(r'test\files\ttml_lrc.xml');
     final parsed = TtmlParser.parse(file.readAsStringSync());
-    print(parsed.lyrics[0].parts);
 
     expect(parsed.lyrics.length, 57);
     expect(parsed.lyrics[0].parts?.length, 8);
-    expect(parsed.lyrics[0].readableText, "They say I'm too young to love you");
+    expect(
+        parsed.lyrics[0].readableText, "They say I'm too young to love you ");
+  });
+
+  test('ttml lyrics 2', () async {
+    final file = File(r'test\files\ttml_lrc2.xml');
+    final parsed = TtmlParser.parse(file.readAsStringSync());
+
+    expect(parsed.lyrics.length, 34);
+    expect(parsed.lyrics[0].readableText,
+        'See I get all the lows, while you live all the highs, boy');
   });
 }

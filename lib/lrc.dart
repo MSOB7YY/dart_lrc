@@ -2,6 +2,7 @@
 library lrc;
 
 import 'package:html_unescape/html_unescape.dart';
+import 'package:xml/xml.dart';
 
 part 'src/core/enums.dart';
 part 'src/core/extensions.dart';
