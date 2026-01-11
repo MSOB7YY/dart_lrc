@@ -188,7 +188,9 @@ class LrcParser {
           );
         }
 
-        final lyricSplit = splitMultiLanguageLine(lyric);
+        final lyricSplit = parts != null && parts.length > 1
+            ? [lyric]
+            : splitMultiLanguageLine(lyric);
         for (var i = 0; i < lyricSplit.length; i++) {
           var lyric = lyricSplit[i];
           if (lyric.length < 5 && lyric.startsWith('v3:')) lyric = '';
