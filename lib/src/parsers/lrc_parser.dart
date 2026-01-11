@@ -114,7 +114,7 @@ class LrcParser {
         List<LrcLinePart>? parts;
 
         final lrclineDetails = _LRCMultiTimestampParser.parseLine(l);
-        final lyric = lrclineDetails.lineText;
+        var lyric = lrclineDetails.lineText;
         final timestamps = lrclineDetails.timestamps;
 
         if (shouldSortLyrics == false) {
@@ -167,7 +167,19 @@ class LrcParser {
                   : personText.startsWith('v3:')
                       ? 3
                       : personToIndex.length + 1;
-
+          if (!lyric.endsWith('>')) {
+            try {
+              for (var start = i + 1; i < lines.length; i++) {
+                final nextLine = lines[start];
+                final nextTimestamp =
+                    _LRCMultiTimestampParser.extractMainTimestamp(nextLine);
+                if (nextTimestamp != null) {
+                  lyric = '$lyric<$nextTimestamp>';
+                  break;
+                }
+              }
+            } catch (_) {}
+          }
           parts.addAll(
             extractTimeStampPartFromLine(
               lyric,

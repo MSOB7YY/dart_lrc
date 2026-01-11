@@ -85,6 +85,16 @@ Somewhere in these eyes, I'm on your side
         'Look at ya, look at ya, look at ya, look at ya ');
   });
 
+  test('word synced lyrics 6', () {
+    final file = File(r'test\files\timed_lrc_6.lrc');
+    final parsed = Lrc.parse(file.readAsStringSync());
+
+    expect(parsed.lyrics.length, 37);
+    expect(parsed.lyrics[0].parts?.length, 5);
+    expect(parsed.lyrics[0].readableText,
+        'Cigarettes,  cigarettes  out  the  window');
+  });
+
   test('ttml lyrics', () async {
     final file = File(r'test\files\ttml_lrc.xml');
     final parsed = TtmlParser.parse(file.readAsStringSync());

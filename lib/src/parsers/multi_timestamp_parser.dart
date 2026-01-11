@@ -6,7 +6,21 @@ class _LRCMultiTimestampParser {
 
   /// supports 2-digit minutes, 2-digit seconds & optional 1-2-3-digit hundreds.
   static final _durRegex =
-      RegExp(r'\[([0-9]{1,}):(\d{1,})(\.[0-9]{1,})?\](.*)');
+      RegExp(r'\[([0-9]{1,}):(\d{1,})(\.[0-9]{1,})?\](.*)?');
+
+  static String? extractMainTimestamp(String line) {
+    final m = _durRegex.firstMatch(line);
+    if (m == null) return null;
+    try {
+      final minutes = m.group(1);
+      if (minutes != null) {
+        final seconds = m.group(2) ?? '00';
+        final hundreds = m.group(3) ?? '00';
+        return '$minutes:$seconds$hundreds';
+      }
+    } catch (_) {}
+    return null;
+  }
 
   /// Converts multi-timestamped lyrics lines into a pair of `lineText` & `timestamps` list
   static _MultiTimeStampDetails parseLine(String line) {
