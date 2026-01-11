@@ -160,13 +160,16 @@ class LrcParser {
 
           final indexOfLT = lyric.indexOf('<');
           final personText = indexOfLT < 0 ? '' : lyric.substring(0, indexOfLT);
-          person = personToIndex[personText] ??= personText.startsWith('v1:')
-              ? 1
-              : personText.startsWith('v2:')
-                  ? 2
-                  : personText.startsWith('v3:')
-                      ? 3
-                      : personToIndex.length + 1;
+          if (personText.contains(':')) {
+            person = personToIndex[personText] ??= personText.startsWith('v1:')
+                ? 1
+                : personText.startsWith('v2:')
+                    ? 2
+                    : personText.startsWith('v3:')
+                        ? 3
+                        : personToIndex.length + 1;
+          }
+
           if (!lyric.endsWith('>')) {
             try {
               for (var start = i + 1; i < lines.length; i++) {
