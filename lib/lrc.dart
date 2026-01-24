@@ -1,6 +1,10 @@
 /// The main library for support for LRCs.
 library lrc;
 
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:charset/charset.dart';
 import 'package:html_unescape/html_unescape.dart';
 import 'package:xml/xml.dart';
 

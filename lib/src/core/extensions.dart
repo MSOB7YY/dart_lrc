@@ -34,3 +34,27 @@ extension StringExtensions on String {
   /// Handy extension getter if the given string is a valid LRC
   bool get isValidLrc => LrcParser.isValid(this);
 }
+
+extension LrcFileExtensions on File {
+  String readLrcStringSync() {
+    try {
+      return readAsStringSync(encoding: utf8);
+    } on FileSystemException catch (_) {
+      try {
+        return readAsStringSync(encoding: utf16);
+      } catch (_) {}
+    }
+    return '';
+  }
+
+  Future<String> readLrcString() async {
+    try {
+      return await readAsString(encoding: utf8);
+    } on FileSystemException catch (_) {
+      try {
+        return await readAsString(encoding: utf16);
+      } catch (_) {}
+    }
+    return '';
+  }
+}

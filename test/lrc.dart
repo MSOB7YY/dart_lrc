@@ -77,7 +77,7 @@ Somewhere in these eyes, I'm on your side
 
   test('word synced lyrics', () {
     final file = File(r'test\files\timed_lrc.lrc');
-    final parsed = Lrc.parse(file.readAsStringSync());
+    final parsed = Lrc.parse(file.readLrcStringSync());
 
     expect(parsed.lyrics.length, 89);
     expect(parsed.lyrics[0].parts?.length, 12);
@@ -87,7 +87,7 @@ Somewhere in these eyes, I'm on your side
 
   test('word synced lyrics 6', () {
     final file = File(r'test\files\timed_lrc_6.lrc');
-    final parsed = Lrc.parse(file.readAsStringSync());
+    final parsed = Lrc.parse(file.readLrcStringSync());
 
     expect(parsed.lyrics.length, 37);
     expect(parsed.lyrics[0].parts?.length, 5);
@@ -95,9 +95,17 @@ Somewhere in these eyes, I'm on your side
         'Cigarettes,  cigarettes  out  the  window');
   });
 
+  test('word synced lyrics 7 - utf16_le_bom', () {
+    final file = File(r'test\files\timed_lrc_7_utf16_le_bom.lrc');
+    final parsed = Lrc.parse(file.readLrcStringSync());
+
+    expect(parsed.lyrics.length, 91);
+    expect(parsed.lyrics[1].readableText.trim(), 'Hateshinai sora wo yuku');
+  });
+
   test('ttml lyrics', () async {
     final file = File(r'test\files\ttml_lrc.xml');
-    final parsed = TtmlParser.parse(file.readAsStringSync());
+    final parsed = TtmlParser.parse(file.readLrcStringSync());
 
     expect(parsed.lyrics.length, 57);
     expect(parsed.lyrics[0].parts?.length, 8);
@@ -107,7 +115,7 @@ Somewhere in these eyes, I'm on your side
 
   test('ttml lyrics 2', () async {
     final file = File(r'test\files\ttml_lrc2.xml');
-    final parsed = TtmlParser.parse(file.readAsStringSync());
+    final parsed = TtmlParser.parse(file.readLrcStringSync());
 
     expect(parsed.lyrics.length, 34);
     expect(parsed.lyrics[0].readableText,
