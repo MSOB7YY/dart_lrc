@@ -33,6 +33,7 @@ extension LrcExtensions on Lrc {
   }) forUiDisplay(
     double multiplier, {
     Duration durationDifferenceToInsertEmptyLine = const Duration(seconds: 1),
+    bool romanize = false,
   }) {
     final originalLyrics = lyrics;
     final offset = this.offset ?? 0;
@@ -80,6 +81,12 @@ extension LrcExtensions on Lrc {
           }
         } catch (_) {}
       }
+      if (romanize) {
+        final romanized = _romanized(item, index, calculatedForSpedUpVersions);
+        if (romanized != null) {
+          uiLyricsLines.add(romanized);
+        }
+      }
     }
     return (
       uiLyricsLines: uiLyricsLines,
@@ -88,6 +95,74 @@ extension LrcExtensions on Lrc {
   }
 }
 
+const _kanaKit = KanaKit(
+  config: KanaKitConfig(
+    passRomaji: true,
+    passKanji: false,
+    upcaseKatakana: true,
+  ),
+);
+
+String? _toRomajiOrNull(String txt) {
+  if (txt.isNotEmpty) {
+    return _kanaKit.toRomaji(txt);
+  }
+  return null;
+}
+
+String _toRomajiOrOriginal(String txt) {
+  return _toRomajiOrNull(txt) ?? txt;
+}
+
+LrcLine? _romanized(LrcLine line, int index, Duration lineTimestamp) {
+  LrcLine? romanizedLine;
+  final parts = line.parts;
+  if (parts != null && parts.isNotEmpty) {
+    var hasRomajiPart = false;
+    final romanizedParts = <LrcLinePart>[];
+    for (final p in parts) {
+      final romanizedPart = _toRomajiOrNull(p.lyrics);
+      if (romanizedPart != null && romanizedPart != p.lyrics) {
+        hasRomajiPart = true;
+      }
+      // -- always add to retain order
+      romanizedParts.add(
+        LrcLinePart(
+          startTimestamp: p.startTimestamp,
+          endTimestamp: p.endTimestamp,
+          lyrics: romanizedPart ?? p.lyrics,
+        ),
+      );
+    }
+    if (hasRomajiPart) {
+      romanizedLine = LrcLine(
+        timestamp: lineTimestamp,
+        originalIndex: index - 0.1,
+        lyrics: _toRomajiOrOriginal(line.lyrics),
+        readableText: romanizedParts.map((e) => e.lyrics).join(),
+        type: line.type,
+        parts: romanizedParts,
+        person: line.person,
+      );
+    }
+  } else {
+    final txt = line.lyrics;
+    final romanized = _toRomajiOrNull(txt);
+    if (romanized != null && romanized != txt) {
+      romanizedLine = LrcLine(
+        timestamp: lineTimestamp,
+        originalIndex: index - 0.1,
+        lyrics: romanized,
+        readableText: romanized,
+        type: line.type,
+        parts: parts,
+        person: line.person,
+      );
+    }
+  }
+
+  return romanizedLine;
+}
 
 /// Handy extensions on strings
 extension StringExtensions on String {

@@ -6,6 +6,7 @@ import 'dart:io';
 
 import 'package:charset/charset.dart';
 import 'package:html_unescape/html_unescape.dart';
+import 'package:kana_kit/kana_kit.dart';
 import 'package:xml/xml.dart';
 
 part 'src/core/enums.dart';
