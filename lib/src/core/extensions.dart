@@ -26,6 +26,69 @@ extension LrcLineExtensions on List<LrcLine> {
   }
 }
 
+extension LrcExtensions on Lrc {
+  ({
+    List<LrcLine> uiLyricsLines,
+    Map<Duration, int> highlightTimestampsMap,
+  }) forUiDisplay(
+    double multiplier, {
+    Duration durationDifferenceToInsertEmptyLine = const Duration(seconds: 1),
+  }) {
+    final originalLyrics = lyrics;
+    final offset = this.offset ?? 0;
+    final uiLyricsLines = <LrcLine>[];
+    final highlightTimestampsMap = <Duration, int>{}; // timestamp: index
+    var indexExtra = 0;
+    for (var index = 0; index < originalLyrics.length; index++) {
+      final item = originalLyrics[index];
+
+      final lineTimeStamp = item.timestamp - Duration(milliseconds: offset);
+      final calculatedForSpedUpVersions =
+          multiplier == 0 ? lineTimeStamp : (lineTimeStamp * multiplier);
+      final newLrcLine =
+          item.withTimeStamp(newTimestamp: calculatedForSpedUpVersions);
+      highlightTimestampsMap[calculatedForSpedUpVersions] ??=
+          index + indexExtra;
+      uiLyricsLines.add(newLrcLine);
+      final parts = newLrcLine.parts;
+      if (parts != null) {
+        try {
+          final nextLine = index == originalLyrics.length - 1
+              ? null
+              : originalLyrics[index + 1];
+          if (nextLine != null) {
+            final partEndTimestamp = parts.last.endTimestamp;
+            if ((nextLine.timestamp - partEndTimestamp) >
+                durationDifferenceToInsertEmptyLine) {
+              // -- insert empty line to allow dynamic lrc view to hide lrc during long transitions
+              indexExtra++;
+              final emptyLineIndex = index + indexExtra;
+
+              uiLyricsLines.add(
+                LrcLine(
+                  timestamp: partEndTimestamp,
+                  originalIndex: emptyLineIndex + 0.1,
+                  lyrics: '',
+                  readableText: '',
+                  type: LrcTypes.simple,
+                  parts: const [],
+                  person: null,
+                ),
+              );
+              highlightTimestampsMap[partEndTimestamp] ??= emptyLineIndex;
+            }
+          }
+        } catch (_) {}
+      }
+    }
+    return (
+      uiLyricsLines: uiLyricsLines,
+      highlightTimestampsMap: highlightTimestampsMap,
+    );
+  }
+}
+
+
 /// Handy extensions on strings
 extension StringExtensions on String {
   /// Handy extension method that parses the string to an [Lrc]

@@ -5,7 +5,7 @@ class LrcLine {
   ///timestamp for the lyrics wherein it'll be displayed
   final Duration timestamp;
 
-  final int originalIndex;
+  final num originalIndex;
 
   ///the raw lyrics for the line
   final String lyrics;
