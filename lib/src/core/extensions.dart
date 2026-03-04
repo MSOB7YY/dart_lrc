@@ -29,7 +29,7 @@ extension LrcLineExtensions on List<LrcLine> {
 extension LrcExtensions on Lrc {
   ({
     List<LrcLine> uiLyricsLines,
-    Map<Duration, int> highlightTimestampsMap,
+    Map<Duration, List<int>> highlightTimestampsMap,
   }) forUiDisplay(
     double multiplier, {
     Duration durationDifferenceToInsertEmptyLine = const Duration(seconds: 1),
@@ -38,7 +38,8 @@ extension LrcExtensions on Lrc {
     final originalLyrics = lyrics;
     final offset = this.offset ?? 0;
     final uiLyricsLines = <LrcLine>[];
-    final highlightTimestampsMap = <Duration, int>{}; // timestamp: index
+    final highlightTimestampsMap =
+        <Duration, List<int>>{}; // timestamp: [index]
     var indexExtra = 0;
     for (var index = 0; index < originalLyrics.length; index++) {
       final item = originalLyrics[index];
@@ -48,8 +49,9 @@ extension LrcExtensions on Lrc {
           multiplier == 0 ? lineTimeStamp : (lineTimeStamp * multiplier);
       final newLrcLine =
           item.withTimeStamp(newTimestamp: calculatedForSpedUpVersions);
-      highlightTimestampsMap[calculatedForSpedUpVersions] ??=
-          index + indexExtra;
+      final indicesList =
+          highlightTimestampsMap[calculatedForSpedUpVersions] ??= [];
+      indicesList.add(index + indexExtra);
       uiLyricsLines.add(newLrcLine);
       final parts = newLrcLine.parts;
       if (parts != null) {
@@ -76,7 +78,9 @@ extension LrcExtensions on Lrc {
                   person: null,
                 ),
               );
-              highlightTimestampsMap[partEndTimestamp] ??= emptyLineIndex;
+              final indicesList =
+                  highlightTimestampsMap[calculatedForSpedUpVersions] ??= [];
+              indicesList.add(emptyLineIndex);
             }
           }
         } catch (_) {}
