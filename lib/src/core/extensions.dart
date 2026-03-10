@@ -79,7 +79,7 @@ extension LrcExtensions on Lrc {
                 ),
               );
               final indicesList =
-                  highlightTimestampsMap[calculatedForSpedUpVersions] ??= [];
+                  highlightTimestampsMap[partEndTimestamp] ??= [];
               indicesList.add(emptyLineIndex);
             }
           }
