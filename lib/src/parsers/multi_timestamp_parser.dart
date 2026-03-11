@@ -6,7 +6,7 @@ class _LRCMultiTimestampParser {
 
   /// supports 2-digit minutes, 2-digit seconds & optional 1-2-3-digit hundreds.
   static final _durRegex =
-      RegExp(r'\[([0-9]{1,}):(\d{1,})(\.[0-9]{1,})?\](.*)?');
+      RegExp(r'\[([0-9]{1,}):(\d{1,})(\.[0-9]{1,})?\]\s*(.*)?');
 
   static String? extractMainTimestamp(String line) {
     final m = _durRegex.firstMatch(line);
