@@ -121,4 +121,13 @@ Somewhere in these eyes, I'm on your side
     expect(parsed.lyrics[0].readableText,
         'See I get all the lows, while you live all the highs, boy');
   });
+
+  test('ttml lyrics3', () async {
+    final file = File(r'test\files\ttml_lrc3.ttml');
+    final parsed = TtmlParser.parse(file.readLrcStringSync());
+
+    expect(parsed.lyrics.length, 111);
+    expect(parsed.lyrics[1].parts?.length, 4);
+    expect(parsed.lyrics[1].readableText, 'See dha see dha ');
+  });
 }

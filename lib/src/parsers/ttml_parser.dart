@@ -1,5 +1,3 @@
-// ignore_for_file: body_might_complete_normally_nullable
-
 part of lrc;
 
 class TtmlParser {
@@ -73,8 +71,7 @@ class TtmlParser {
 
 class _TtmlLineExtractorXml extends _TtmlLineExtractorBase<XmlElement> {
   @override
-  bool isValid(String content) =>
-      content.contains('<?xml') && content.contains('<p begin=');
+  bool isValid(String content) => content.contains('<p begin=');
 
   @override
   Iterable<XmlElement> allMatches(String content) {
@@ -106,11 +103,25 @@ class _TtmlLineExtractorXml extends _TtmlLineExtractorBase<XmlElement> {
 
   @override
   String? extractText(XmlElement p) {
-    final span = p.findElements('span').firstOrNull;
-    if (span != null) {
-      return span.innerText.trim();
+    final spans = p
+        .findElements('span')
+        .where((s) =>
+            s.getAttribute('ttm:role') != 'x-bg' &&
+            s.getAttribute('begin') != null)
+        .toList();
+
+    // No word-level spans → return plain text
+    if (spans.isEmpty) return p.innerText.trim();
+    if (spans.length == 1) return spans.first.innerText.trim();
+
+    // Has spans → convert to LRC enhanced format
+    final buffer = StringBuffer();
+    for (final span in spans) {
+      buffer.write('<${span.getAttribute('begin')}>${span.innerText.trim()} ');
     }
-    return null;
+    final end = p.getAttribute('end');
+    if (end != null) buffer.write('<$end>');
+    return buffer.isEmpty ? null : buffer.toString();
   }
 
   static int _timestampToMilliseconds(String timestamp) {
@@ -140,6 +151,7 @@ class _TtmlLineExtractorRegex extends _TtmlLineExtractorBase<RegExpMatch> {
   static final _regexp = RegExp(
     r'<p[^>]*?begin="([\d:.]+)s?"[^>]*?end="([\d:.]+)s?"[^>]*?>(.*?)<\/p>',
     multiLine: true,
+    dotAll: true,
   );
 
   @override
@@ -153,7 +165,11 @@ class _TtmlLineExtractorRegex extends _TtmlLineExtractorBase<RegExpMatch> {
   @override
   int? extractStartMS(RegExpMatch m) {
     try {
-      return (double.parse(m.group(1)!) * 1000).round();
+      final raw = m.group(1)!;
+      if (raw.contains(':')) {
+        return _TtmlLineExtractorXml._timestampToMilliseconds(raw);
+      }
+      return (double.parse(raw) * 1000).round();
     } catch (_) {}
     return null;
   }
@@ -161,14 +177,33 @@ class _TtmlLineExtractorRegex extends _TtmlLineExtractorBase<RegExpMatch> {
   @override
   int? extractEndMS(RegExpMatch m) {
     try {
-      return (double.parse(m.group(2)!) * 1000).round();
+      final raw = m.group(2)!;
+      if (raw.contains(':')) {
+        return _TtmlLineExtractorXml._timestampToMilliseconds(raw);
+      }
+      return (double.parse(raw) * 1000).round();
     } catch (_) {}
     return null;
   }
 
   @override
   String? extractText(RegExpMatch m) {
-    return m.group(3);
+    final raw = m.group(3) ?? '';
+    final spanRegex = RegExp(r'<span[^>]*begin="([^"]+)"[^>]*>([^<]*)<\/span>');
+    final spans = spanRegex.allMatches(raw).toList();
+
+    // no spans, already plain text or LRC enhanced format
+    if (spans.isEmpty) return raw;
+    if (spans.length == 1) return spans.first.group(2)?.trim();
+
+    // convert to LRC enhanced format
+    final buffer = StringBuffer();
+    for (final span in spans) {
+      buffer.write('<${span.group(1)}>${span.group(2)?.trim()} ');
+    }
+    final end = m.group(2);
+    if (end != null) buffer.write('<$end>');
+    return buffer.isEmpty ? null : buffer.toString();
   }
 }
 
