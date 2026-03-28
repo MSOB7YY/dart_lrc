@@ -130,4 +130,13 @@ Somewhere in these eyes, I'm on your side
     expect(parsed.lyrics[1].parts?.length, 4);
     expect(parsed.lyrics[1].readableText, 'See dha see dha ');
   });
+  test('ttml lyrics4', () async {
+    final file = File(r'test\files\ttml_lrc4.ttml');
+    final parsed = TtmlParser.parse(file.readLrcStringSync());
+
+    expect(parsed.lyrics.length, 52);
+    expect(parsed.lyrics[1].parts?.length, 8);
+    expect(
+        parsed.lyrics[1].readableText, 'Tryna find the one that can fix me ');
+  });
 }

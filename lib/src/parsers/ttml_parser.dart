@@ -101,6 +101,15 @@ class _TtmlLineExtractorXml extends _TtmlLineExtractorBase<XmlElement> {
     return null;
   }
 
+  static String _msToLrcTimestamp(int ms) {
+    final minutes = ms ~/ 60000;
+    final seconds = (ms % 60000) ~/ 1000;
+    final centiseconds = (ms % 1000) ~/ 10;
+    return '${minutes.toString().padLeft(2, '0')}:'
+        '${seconds.toString().padLeft(2, '0')}.'
+        '${centiseconds.toString().padLeft(2, '0')}';
+  }
+
   @override
   String? extractText(XmlElement p) {
     final spans = p
@@ -110,17 +119,19 @@ class _TtmlLineExtractorXml extends _TtmlLineExtractorBase<XmlElement> {
             s.getAttribute('begin') != null)
         .toList();
 
-    // No word-level spans → return plain text
     if (spans.isEmpty) return p.innerText.trim();
     if (spans.length == 1) return spans.first.innerText.trim();
 
-    // Has spans → convert to LRC enhanced format
     final buffer = StringBuffer();
     for (final span in spans) {
-      buffer.write('<${span.getAttribute('begin')}>${span.innerText.trim()} ');
+      final beginMs = _timestampToMilliseconds(span.getAttribute('begin')!);
+      buffer.write('<${_msToLrcTimestamp(beginMs)}>${span.innerText.trim()} ');
     }
     final end = p.getAttribute('end');
-    if (end != null) buffer.write('<$end>');
+    if (end != null) {
+      final endMs = _timestampToMilliseconds(end);
+      buffer.write('<${_msToLrcTimestamp(endMs)}>');
+    }
     return buffer.isEmpty ? null : buffer.toString();
   }
 
@@ -192,17 +203,21 @@ class _TtmlLineExtractorRegex extends _TtmlLineExtractorBase<RegExpMatch> {
     final spanRegex = RegExp(r'<span[^>]*begin="([^"]+)"[^>]*>([^<]*)<\/span>');
     final spans = spanRegex.allMatches(raw).toList();
 
-    // no spans, already plain text or LRC enhanced format
     if (spans.isEmpty) return raw;
     if (spans.length == 1) return spans.first.group(2)?.trim();
 
-    // convert to LRC enhanced format
     final buffer = StringBuffer();
     for (final span in spans) {
-      buffer.write('<${span.group(1)}>${span.group(2)?.trim()} ');
+      final beginMs =
+          _TtmlLineExtractorXml._timestampToMilliseconds(span.group(1)!);
+      buffer.write(
+          '<${_TtmlLineExtractorXml._msToLrcTimestamp(beginMs)}>${span.group(2)?.trim()} ');
     }
     final end = m.group(2);
-    if (end != null) buffer.write('<$end>');
+    if (end != null) {
+      final endMs = _TtmlLineExtractorXml._timestampToMilliseconds(end);
+      buffer.write('<${_TtmlLineExtractorXml._msToLrcTimestamp(endMs)}>');
+    }
     return buffer.isEmpty ? null : buffer.toString();
   }
 }
