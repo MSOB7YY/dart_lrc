@@ -42,25 +42,28 @@ extension LrcExtensions on Lrc {
         <Duration, List<int>>{}; // timestamp: [index]
     var indexExtra = 0;
     for (var index = 0; index < originalLyrics.length; index++) {
-      final item = originalLyrics[index];
+      final ogItem = originalLyrics[index];
 
-      final lineTimeStamp = item.timestamp - Duration(milliseconds: offset);
+      final lineTimeStamp = ogItem.timestamp - Duration(milliseconds: offset);
       final calculatedForSpedUpVersions =
           multiplier == 0 ? lineTimeStamp : (lineTimeStamp * multiplier);
-      final newLrcLine =
-          item.withTimeStamp(newTimestamp: calculatedForSpedUpVersions);
+
+      final newLrcLine = ogItem.withTimeStamp(
+        newTimestamp: calculatedForSpedUpVersions,
+        parts: _mergeParts(ogItem.parts),
+      );
       final indicesList =
           highlightTimestampsMap[calculatedForSpedUpVersions] ??= [];
       indicesList.add(index + indexExtra);
       uiLyricsLines.add(newLrcLine);
-      final parts = newLrcLine.parts;
-      if (parts != null) {
+      final newParts = newLrcLine.parts;
+      if (newParts != null) {
         try {
           final nextLine = index == originalLyrics.length - 1
               ? null
               : originalLyrics[index + 1];
           if (nextLine != null) {
-            final partEndTimestamp = parts.last.endTimestamp;
+            final partEndTimestamp = newParts.last.endTimestamp;
             if ((nextLine.timestamp - partEndTimestamp) >
                 durationDifferenceToInsertEmptyLine) {
               // -- insert empty line to allow dynamic lrc view to hide lrc during long transitions
@@ -86,7 +89,8 @@ extension LrcExtensions on Lrc {
         } catch (_) {}
       }
       if (romanize) {
-        final romanized = _romanized(item, index, calculatedForSpedUpVersions);
+        final romanized =
+            _romanized(newLrcLine, index, calculatedForSpedUpVersions);
         if (romanized != null) {
           uiLyricsLines.add(romanized);
         }
@@ -97,6 +101,35 @@ extension LrcExtensions on Lrc {
       highlightTimestampsMap: highlightTimestampsMap,
     );
   }
+}
+
+List<LrcLinePart>? _mergeParts(
+  List<LrcLinePart>? parts, {
+  int minDurationMs = 250,
+}) {
+  if (parts == null || parts.isEmpty) return parts;
+
+  final merged = <LrcLinePart>[];
+  var current = parts[0];
+
+  for (var i = 1; i < parts.length; i++) {
+    final next = parts[i];
+    final duration = current.endTimestamp.inMilliseconds -
+        current.startTimestamp.inMilliseconds;
+
+    if (duration < minDurationMs) {
+      current = LrcLinePart(
+        startTimestamp: current.startTimestamp,
+        endTimestamp: next.endTimestamp,
+        lyrics: current.lyrics + next.lyrics,
+      );
+    } else {
+      merged.add(current);
+      current = next;
+    }
+  }
+  merged.add(current);
+  return merged;
 }
 
 const _kanaKit = KanaKit(

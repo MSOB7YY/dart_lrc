@@ -31,7 +31,10 @@ class LrcLine {
     required this.person,
   });
 
-  LrcLine withTimeStamp({required Duration newTimestamp}) {
+  LrcLine withTimeStamp({
+    required Duration newTimestamp,
+    List<LrcLinePart>? parts,
+  }) {
     return LrcLine(
       timestamp: newTimestamp,
       originalIndex: originalIndex,
@@ -39,7 +42,7 @@ class LrcLine {
       readableText: readableText,
       type: type,
       person: person,
-      parts: parts,
+      parts: parts ?? this.parts,
     );
   }
 
