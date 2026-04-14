@@ -136,24 +136,33 @@ class _TtmlLineExtractorXml extends _TtmlLineExtractorBase<XmlElement> {
   }
 
   static int _timestampToMilliseconds(String timestamp) {
-    final parts = timestamp.split(':');
-    if (parts.length != 3) return 0;
+    final colonParts = timestamp.split(':');
 
-    final hours = int.tryParse(parts[0]) ?? 0;
-    final minutes = int.tryParse(parts[1]) ?? 0;
+    var hours = 0, minutes = 0;
+    String secondsRaw;
 
-    final secondsParts = parts[2].split('.');
+    if (colonParts.length == 3) {
+      hours = int.tryParse(colonParts[0]) ?? 0;
+      minutes = int.tryParse(colonParts[1]) ?? 0;
+      secondsRaw = colonParts[2];
+    } else if (colonParts.length == 2) {
+      minutes = int.tryParse(colonParts[0]) ?? 0;
+      secondsRaw = colonParts[1];
+    } else {
+      secondsRaw = colonParts[0];
+    }
+
+    final secondsParts = secondsRaw.split('.');
     final seconds = int.tryParse(secondsParts[0]) ?? 0;
-
     var milliseconds = 0;
     if (secondsParts.length > 1) {
-      var msString = secondsParts[1].padRight(3, '0').substring(0, 3);
+      final msString = secondsParts[1].padRight(3, '0').substring(0, 3);
       milliseconds = int.tryParse(msString) ?? 0;
     }
 
-    return (hours * 3600000) +
-        (minutes * 60000) +
-        (seconds * 1000) +
+    return (hours * 3_600_000) +
+        (minutes * 60_000) +
+        (seconds * 1_000) +
         milliseconds;
   }
 }
@@ -177,10 +186,7 @@ class _TtmlLineExtractorRegex extends _TtmlLineExtractorBase<RegExpMatch> {
   int? extractStartMS(RegExpMatch m) {
     try {
       final raw = m.group(1)!;
-      if (raw.contains(':')) {
-        return _TtmlLineExtractorXml._timestampToMilliseconds(raw);
-      }
-      return (double.parse(raw) * 1000).round();
+      return _TtmlLineExtractorXml._timestampToMilliseconds(raw);
     } catch (_) {}
     return null;
   }
@@ -189,10 +195,7 @@ class _TtmlLineExtractorRegex extends _TtmlLineExtractorBase<RegExpMatch> {
   int? extractEndMS(RegExpMatch m) {
     try {
       final raw = m.group(2)!;
-      if (raw.contains(':')) {
-        return _TtmlLineExtractorXml._timestampToMilliseconds(raw);
-      }
-      return (double.parse(raw) * 1000).round();
+      return _TtmlLineExtractorXml._timestampToMilliseconds(raw);
     } catch (_) {}
     return null;
   }
