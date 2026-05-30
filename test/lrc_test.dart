@@ -103,6 +103,14 @@ Somewhere in these eyes, I'm on your side
     expect(parsed.lyrics[1].readableText.trim(), 'Hateshinai sora wo yuku');
   });
 
+  test('word synced lyrics 9', () {
+    final file = File(r'test\files\timed_lrc_9.lrc');
+    final parsed = Lrc.parse(file.readLrcStringSync());
+
+    expect(parsed.lyrics.length, 83);
+    expect(parsed.lyrics[1].readableText.trim(), 'Just to save you');
+  });
+
   test('ttml lyrics', () async {
     final file = File(r'test\files\ttml_lrc.xml');
     final parsed = TtmlParser.parse(file.readLrcStringSync());

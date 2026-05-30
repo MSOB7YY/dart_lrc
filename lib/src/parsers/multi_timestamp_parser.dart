@@ -43,7 +43,7 @@ class _LRCMultiTimestampParser {
       }
     }
 
-    return _MultiTimeStampDetails(
+    return _MultiTimeStampDetails.trimmed(
       lineText: lineText,
       timestamps: timestamps,
     );
@@ -78,8 +78,8 @@ class _MultiTimeStampDetails {
   final String lineText;
   final List<Duration> timestamps;
 
-  const _MultiTimeStampDetails({
-    required this.lineText,
+  _MultiTimeStampDetails.trimmed({
+    required String lineText,
     required this.timestamps,
-  });
+  }) : lineText = lineText.trim();
 }

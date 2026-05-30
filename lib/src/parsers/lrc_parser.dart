@@ -96,8 +96,8 @@ class LrcParser {
             : null;
 
     // loop thru each lines
-    for (var i = 0; i < lines.length; i++) {
-      var l = lines[i];
+    for (var lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+      var l = lines[lineIndex];
       artist ??= setIfMatchTag(l, 'ar');
       album ??= setIfMatchTag(l, 'al');
       title ??= setIfMatchTag(l, 'ti');
@@ -132,25 +132,7 @@ class LrcParser {
         int? person;
 
         // checkers for different types of LRCs
-        if (lyric.contains(RegExp(r'^\w:'))) {
-          //if extended
-          type = (type == LrcTypes.enhanced)
-              ? LrcTypes.extended_enhanced
-              : LrcTypes.extended;
-
-          final personText = lyric[0];
-          person = personToIndex[personText] ??= personToIndex.length + 1;
-
-          parts = [];
-          parts.add(LrcLinePart(
-            startTimestamp: timestamps.first,
-            endTimestamp: timestamps.first,
-            lyrics: lyric.substring(2),
-          ));
-
-          lineType = LrcTypes.extended;
-        } else if (lyric
-            .contains(RegExp(r'<[0-9]{1,}:[0-9]{1,}(\.[0-9]{1,})?>'))) {
+        if (lyric.contains(RegExp(r'<[0-9]{1,}:[0-9]{1,}(\.[0-9]{1,})?>'))) {
           // if enhanced
           type = (type == LrcTypes.extended)
               ? LrcTypes.extended_enhanced
@@ -161,18 +143,26 @@ class LrcParser {
           final indexOfLT = lyric.indexOf('<');
           final personText = indexOfLT < 0 ? '' : lyric.substring(0, indexOfLT);
           if (personText.contains(':')) {
-            person = personToIndex[personText] ??= personText.startsWith('v1:')
-                ? 1
-                : personText.startsWith('v2:')
-                    ? 2
-                    : personText.startsWith('v3:')
-                        ? 3
-                        : personToIndex.length + 1;
+            person = personToIndex[personText];
+            if (person == null) {
+              try {
+                final numberString =
+                    RegExp(r'v(\d+):').firstMatch(personText)?[1];
+                if (numberString != null) {
+                  person = int.tryParse(numberString);
+                }
+              } catch (_) {}
+            }
+            person ??= personToIndex.length + 1;
+            personToIndex[personText] = person;
+            lyric = lyric.substring(indexOfLT); // ensure
           }
 
           if (!lyric.endsWith('>')) {
             try {
-              for (var start = i + 1; i < lines.length; i++) {
+              for (var start = lineIndex + 1;
+                  lineIndex < lines.length;
+                  lineIndex++) {
                 final nextLine = lines[start];
                 final nextTimestamp =
                     _LRCMultiTimestampParser.extractMainTimestamp(nextLine);
@@ -189,13 +179,29 @@ class LrcParser {
               startTimeStamp: timestamps.first,
             ),
           );
+        } else if (lyric.contains(RegExp(r'^\w:'))) {
+          //if extended
+          type = (type == LrcTypes.enhanced)
+              ? LrcTypes.extended_enhanced
+              : LrcTypes.extended;
+
+          final personText = lyric[0];
+          person = personToIndex[personText] ??= personToIndex.length + 1;
+
+          parts = [];
+          parts.add(LrcLinePart(
+            startTimestamp: timestamps.first,
+            endTimestamp: timestamps.first,
+            lyrics: lyric.substring(2),
+          ));
+
+          lineType = LrcTypes.extended;
         }
 
         final lyricSplit = parts != null && parts.length > 1
-            ? [lyric]
+            ? List.filled(1, lyric, growable: false)
             : splitMultiLanguageLine(lyric);
-        for (var i = 0; i < lyricSplit.length; i++) {
-          var lyric = lyricSplit[i];
+        for (var lyric in lyricSplit) {
           if (lyric.length < 5 && lyric.startsWith('v3:')) lyric = '';
           final readableText = parts != null && parts.isNotEmpty
               ? parts.map((e) => e.lyrics).join()
