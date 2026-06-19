@@ -64,6 +64,8 @@ class Lrc {
 
   final int personCount;
 
+  final bool isRTL;
+
   /// Handy parameter to get a stream of the lyrics.
   /// See `List<LrcLine>.toStream()`.
   Stream<LrcStream> get stream => lyrics.toStream();
@@ -84,6 +86,7 @@ class Lrc {
     this.offset,
     this.language,
     this.personCount = 1,
+    required this.isRTL,
   });
 
   static Lrc parse(String text) => LrcParser.parse(text);

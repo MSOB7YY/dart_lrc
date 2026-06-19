@@ -257,6 +257,8 @@ class LrcParser {
         personToIndex.values.where((element) => element > 0).length;
     if (personCount <= 0) personCount = 1;
 
+    final isRTL = LrcParser.isLrcRTL(lyrics);
+
     return Lrc(
       type: type ?? LrcTypes.simple,
       artist: artist,
@@ -271,6 +273,7 @@ class LrcParser {
       lyrics: lyrics,
       language: language,
       personCount: personCount,
+      isRTL: isRTL,
     );
   }
 
@@ -282,5 +285,50 @@ class LrcParser {
     final regex = RegExp(
         r'([\r\n]*\[((ti)|(a[rlu])|(by)|([rv]e)|(length)|(offset)|(la)):.+\][\r\n]*)');
     return input.replaceAll(regex, '');
+  }
+
+  static bool isLrcRTL(List<LrcLine> lyrics, {int maxSampleLines = 2}) {
+    return isLrcRTLRaw(
+      lyrics.map((e) => e.readableText),
+      maxSampleLines: maxSampleLines,
+    );
+  }
+
+  static bool isLrcRTLRaw(
+    Iterable<String> lyricsText, {
+    int maxSampleLines = 2,
+  }) {
+    var rtlDetectedSampleCount = 0;
+    var rtlMeter = 0; // increment for rtl, decrement for ltr
+    for (final txt in lyricsText) {
+      for (final codeUnit in txt.codeUnits) {
+        if (_isRTLCodeUnit(codeUnit)) {
+          rtlMeter++;
+        } else {
+          rtlMeter--;
+        }
+      }
+
+      rtlDetectedSampleCount++;
+      if (rtlDetectedSampleCount >= maxSampleLines) {
+        break;
+      }
+    }
+
+    final isRTL = rtlMeter > 0;
+    return isRTL;
+  }
+
+  // by claude
+  static bool _isRTLCodeUnit(int codeUnit) {
+    // Arabic, Syriac, Arabic Supplement, Thaana
+    if (codeUnit >= 0x0600 && codeUnit <= 0x07BF) return true;
+    // Arabic Presentation Forms-A
+    if (codeUnit >= 0xFB50 && codeUnit <= 0xFDFF) return true;
+    // Arabic Presentation Forms-B
+    if (codeUnit >= 0xFE70 && codeUnit <= 0xFEFF) return true;
+    // Hebrew
+    if (codeUnit >= 0x0591 && codeUnit <= 0x05F4) return true;
+    return false;
   }
 }

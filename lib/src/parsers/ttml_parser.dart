@@ -62,9 +62,12 @@ class TtmlParser {
       }
     }
 
+    final isRTL = LrcParser.isLrcRTL(lrcLines);
+
     return Lrc(
       lyrics: lrcLines,
       type: type,
+      isRTL: isRTL,
     );
   }
 }
