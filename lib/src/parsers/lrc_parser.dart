@@ -203,19 +203,22 @@ class LrcParser {
             : splitMultiLanguageLine(lyric);
         for (var lyric in lyricSplit) {
           if (lyric.length < 5 && lyric.startsWith('v3:')) lyric = '';
-          final readableText = parts != null && parts.isNotEmpty
+          final readableTextPre = parts != null && parts.isNotEmpty
               ? parts.map((e) => e.lyrics).join()
               : lyric;
           for (final linetimestamp in timestamps) {
             registeredTimestamps.add(linetimestamp);
+            final readableText =
+                readableTextPre.isNotEmpty ? readableTextPre : lyric;
             lyrics.add(LrcLine(
               timestamp: linetimestamp,
               originalIndex: lyrics.length,
               lyrics: lyric,
-              readableText: readableText.isNotEmpty ? readableText : lyric,
+              readableText: readableText,
               type: lineType,
               parts: parts,
               person: person,
+              isRTL: LrcParser.isLrcLineRTL(readableText),
             ));
           }
         }
@@ -229,14 +232,16 @@ class LrcParser {
         if (text == null) continue;
         final parts = extractTimeStampPartFromLine(text).toList();
         if (parts.isEmpty) continue;
+        final readableText = parts.map((e) => e.lyrics).join();
         lyrics.add(LrcLine(
           timestamp: parts[0].startTimestamp,
           originalIndex: lyrics.length,
           lyrics: text,
-          readableText: parts.map((e) => e.lyrics).join(),
+          readableText: readableText,
           type: type ?? LrcTypes.enhanced,
           parts: parts,
           person: 0,
+          isRTL: LrcParser.isLrcLineRTL(readableText),
         ));
         shouldSortLyrics = true;
       }
@@ -257,8 +262,6 @@ class LrcParser {
         personToIndex.values.where((element) => element > 0).length;
     if (personCount <= 0) personCount = 1;
 
-    final isRTL = LrcParser.isLrcRTL(lyrics);
-
     return Lrc(
       type: type ?? LrcTypes.simple,
       artist: artist,
@@ -273,7 +276,6 @@ class LrcParser {
       lyrics: lyrics,
       language: language,
       personCount: personCount,
-      isRTL: isRTL,
     );
   }
 
@@ -287,32 +289,21 @@ class LrcParser {
     return input.replaceAll(regex, '');
   }
 
-  static bool isLrcRTL(List<LrcLine> lyrics, {int maxSampleLines = 2}) {
-    return isLrcRTLRaw(
-      lyrics.map((e) => e.readableText),
-      maxSampleLines: maxSampleLines,
-    );
-  }
-
-  static bool isLrcRTLRaw(
-    Iterable<String> lyricsText, {
-    int maxSampleLines = 2,
-  }) {
-    var rtlDetectedSampleCount = 0;
+  static bool isLrcLineRTL(String part, {int maxChars = 3}) {
     var rtlMeter = 0; // increment for rtl, decrement for ltr
-    for (final txt in lyricsText) {
-      for (final codeUnit in txt.codeUnits) {
-        if (_isRTLCodeUnit(codeUnit)) {
-          rtlMeter++;
-        } else {
-          rtlMeter--;
-        }
+
+    var checkedCharsCount = 0;
+    for (final codeUnit in part.codeUnits) {
+      if (_isRTLCodeUnit(codeUnit)) {
+        rtlMeter++;
+      } else if (_isEmptyCodeUnit(codeUnit)) {
+        if (rtlMeter != 0) break; // reached space and good enough
+      } else {
+        rtlMeter--;
       }
 
-      rtlDetectedSampleCount++;
-      if (rtlDetectedSampleCount >= maxSampleLines) {
-        break;
-      }
+      checkedCharsCount++;
+      if (checkedCharsCount >= maxChars) break;
     }
 
     final isRTL = rtlMeter > 0;
@@ -330,5 +321,13 @@ class LrcParser {
     // Hebrew
     if (codeUnit >= 0x0591 && codeUnit <= 0x05F4) return true;
     return false;
+  }
+
+  // by claude
+  static bool _isEmptyCodeUnit(int codeUnit) {
+    return codeUnit == 0x20 || // space
+        codeUnit == 0x09 || // tab
+        codeUnit == 0x0A || // line feed
+        codeUnit == 0x0D; // carriage return
   }
 }

@@ -19,6 +19,8 @@ class LrcLine {
 
   final int? person;
 
+  final bool isRTL;
+
   bool get isBGLyrics => person == 0;
 
   const LrcLine({
@@ -29,6 +31,7 @@ class LrcLine {
     required this.type,
     required this.parts,
     required this.person,
+    required this.isRTL,
   });
 
   LrcLine withTimeStamp({
@@ -43,6 +46,7 @@ class LrcLine {
       type: type,
       person: person,
       parts: parts ?? this.parts,
+      isRTL: isRTL,
     );
   }
 

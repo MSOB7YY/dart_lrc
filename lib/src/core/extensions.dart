@@ -79,6 +79,7 @@ extension LrcExtensions on Lrc {
                   type: LrcTypes.simple,
                   parts: const [],
                   person: null,
+                  isRTL: false,
                 ),
               );
               final indicesList =
@@ -172,28 +173,33 @@ LrcLine? _romanized(LrcLine line, int index, Duration lineTimestamp) {
       );
     }
     if (hasRomajiPart) {
+      final romanized = _toRomajiOrOriginal(line.lyrics);
+      final readableText = romanizedParts.map((e) => e.lyrics).join();
       romanizedLine = LrcLine(
         timestamp: lineTimestamp,
         originalIndex: index - 0.1,
-        lyrics: _toRomajiOrOriginal(line.lyrics),
-        readableText: romanizedParts.map((e) => e.lyrics).join(),
+        lyrics: romanized,
+        readableText: readableText,
         type: line.type,
         parts: romanizedParts,
         person: line.person,
+        isRTL: LrcParser.isLrcLineRTL(readableText),
       );
     }
   } else {
     final txt = line.lyrics;
     final romanized = _toRomajiOrNull(txt);
     if (romanized != null && romanized != txt) {
+      final readableText = romanized;
       romanizedLine = LrcLine(
         timestamp: lineTimestamp,
         originalIndex: index - 0.1,
         lyrics: romanized,
-        readableText: romanized,
+        readableText: readableText,
         type: line.type,
         parts: parts,
         person: line.person,
+        isRTL: LrcParser.isLrcLineRTL(readableText),
       );
     }
   }
