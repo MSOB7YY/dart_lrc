@@ -33,10 +33,13 @@ extension LrcExtensions on Lrc {
   }) forUiDisplay(
     double multiplier, {
     Duration durationDifferenceToInsertEmptyLine = const Duration(seconds: 1),
+    Duration extraOffsetDuration = Duration.zero,
     bool romanize = false,
   }) {
     final originalLyrics = lyrics;
-    final offset = this.offset ?? 0;
+    final offsetDuration =
+        Duration(milliseconds: this.offset ?? 0) - extraOffsetDuration;
+    final offsetValid = offsetDuration != Duration.zero;
     final uiLyricsLines = <LrcLine>[];
     final highlightTimestampsMap =
         <Duration, List<int>>{}; // timestamp: [index]
@@ -44,16 +47,15 @@ extension LrcExtensions on Lrc {
     for (var index = 0; index < originalLyrics.length; index++) {
       final ogItem = originalLyrics[index];
 
-      final lineTimeStamp = ogItem.timestamp - Duration(milliseconds: offset);
-      final calculatedForSpedUpVersions =
-          multiplier == 0 ? lineTimeStamp : (lineTimeStamp * multiplier);
+      var lineTimeStampEdited = ogItem.timestamp;
+      if (offsetValid) lineTimeStampEdited -= offsetDuration;
+      if (multiplier != 0) lineTimeStampEdited *= multiplier;
 
       final newLrcLine = ogItem.withTimeStamp(
-        newTimestamp: calculatedForSpedUpVersions,
+        newTimestamp: lineTimeStampEdited,
         parts: _mergeParts(ogItem.parts),
       );
-      final indicesList =
-          highlightTimestampsMap[calculatedForSpedUpVersions] ??= [];
+      final indicesList = highlightTimestampsMap[lineTimeStampEdited] ??= [];
       indicesList.add(index + indexExtra);
       uiLyricsLines.add(newLrcLine);
       final newParts = newLrcLine.parts;
@@ -90,8 +92,7 @@ extension LrcExtensions on Lrc {
         } catch (_) {}
       }
       if (romanize) {
-        final romanized =
-            _romanized(newLrcLine, index, calculatedForSpedUpVersions);
+        final romanized = _romanized(newLrcLine, index, lineTimeStampEdited);
         if (romanized != null) {
           uiLyricsLines.add(romanized);
         }
