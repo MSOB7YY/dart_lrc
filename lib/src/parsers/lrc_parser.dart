@@ -46,6 +46,11 @@ class LrcParser {
         continue;
       }
       if (isFirst) {
+        // -- skip empty first part, happens when the line timestamp
+        // -- is followed directly by the first word timestamp
+        if (lyrics.isEmpty) {
+          continue;
+        }
         // -- skip first part that has `v1:` etc
         if (lyrics.length < 5 &&
             lyrics.startsWith('v') &&
@@ -196,13 +201,31 @@ class LrcParser {
           ));
 
           lineType = LrcTypes.extended;
+        } else {
+          // -- plain line, strip `v1: ` etc prefix
+          final prefix = _personPrefix(lyric);
+          if (prefix != null) {
+            final (vIndex, colonEnd) = prefix;
+            final personText = lyric.substring(vIndex, colonEnd);
+            person = personToIndex[personText];
+            if (person == null) {
+              person = int.tryParse(lyric.substring(vIndex + 1, colonEnd - 1));
+              person ??= personToIndex.length + 1;
+              personToIndex[personText] = person;
+            }
+            var prefixEnd = colonEnd;
+            while (
+                prefixEnd < lyric.length && lyric.codeUnitAt(prefixEnd) == 32) {
+              prefixEnd++;
+            }
+            lyric = lyric.substring(prefixEnd);
+          }
         }
 
         final lyricSplit = parts != null && parts.length > 1
             ? List.filled(1, lyric, growable: false)
             : splitMultiLanguageLine(lyric);
         for (var lyric in lyricSplit) {
-          if (lyric.length < 5 && lyric.startsWith('v3:')) lyric = '';
           final readableTextPre = parts != null && parts.isNotEmpty
               ? parts.map((e) => e.lyrics).join()
               : lyric;
@@ -277,6 +300,26 @@ class LrcParser {
       language: language,
       personCount: personCount,
     );
+  }
+
+  /// Finds a `v<digits>:` person prefix at the start of [lyric],
+  /// allowing leading spaces. Returns the index of `v` and the index
+  /// right after `:`, or null if there is no such prefix.
+  static (int, int)? _personPrefix(String lyric) {
+    final length = lyric.length;
+    var start = 0;
+    while (start < length && lyric.codeUnitAt(start) == 0x20) {
+      start++;
+    }
+    if (start + 3 > length || lyric.codeUnitAt(start) != 0x76 /* v */) {
+      return null;
+    }
+    for (var i = start + 1; i < length; i++) {
+      final c = lyric.codeUnitAt(i);
+      if (c >= 0x30 && c <= 0x39) continue; // digit
+      return (c == 0x3A /* : */ && i > start + 1) ? (start, i + 1) : null;
+    }
+    return null;
   }
 
   /// Checks if the string [input] is a valid LRC using Regex.
