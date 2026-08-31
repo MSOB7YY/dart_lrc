@@ -155,4 +155,78 @@ Somewhere in these eyes, I'm on your side
     expect(parsed.lyrics[2].parts?.length, 0);
     expect(parsed.lyrics[2].readableText, 'Sun is down, freezing cold');
   });
+
+  test('srt subtitles', () {
+    final file = File(r'test\files\sub_lrc.srt');
+    final content = file.readLrcStringSync();
+
+    expect(SubtitleParser.detectFormat(content), SubtitleFormat.srt);
+    final parsed = SubtitleParser.parse(content);
+
+    expect(parsed.lyrics.length, 3);
+    expect(parsed.lyrics[0].readableText, 'Never gonna give you up');
+    expect(parsed.lyrics[1].timestamp, const Duration(milliseconds: 4500));
+    expect(parsed.lyrics[1].readableText,
+        'Never gonna let you down Never gonna run around');
+    expect(parsed.lyrics[1].parts?.single.endTimestamp,
+        const Duration(seconds: 8));
+  });
+
+  test('vtt subtitles', () {
+    final file = File(r'test\files\sub_lrc.vtt');
+    final content = file.readLrcStringSync();
+
+    expect(SubtitleParser.detectFormat(content), SubtitleFormat.vtt);
+    final parsed = SubtitleParser.parse(content);
+
+    expect(parsed.lyrics.length, 3);
+    expect(parsed.lyrics[0].readableText, 'Never gonna give you up');
+    expect(parsed.lyrics[0].person, 1);
+    expect(parsed.lyrics[1].type, LrcTypes.enhanced);
+    expect(parsed.lyrics[1].parts?.length, 5);
+    expect(parsed.lyrics[1].readableText, 'Never gonna let you down');
+    expect(parsed.lyrics[1].parts?.first.startTimestamp,
+        const Duration(milliseconds: 4500));
+    expect(parsed.lyrics[1].parts?.last.endTimestamp,
+        const Duration(seconds: 8));
+    expect(
+        parsed.lyrics[2].readableText, 'Never gonna run around & desert you');
+  });
+
+  test('sbv subtitles', () {
+    final file = File(r'test\files\sub_lrc.sbv');
+    final content = file.readLrcStringSync();
+
+    expect(SubtitleParser.detectFormat(content), SubtitleFormat.sbv);
+    final parsed = SubtitleParser.parse(content);
+
+    expect(parsed.lyrics.length, 2);
+    expect(parsed.lyrics[0].readableText, 'Never gonna give you up');
+    expect(parsed.lyrics[1].readableText,
+        'Never gonna let you down Never gonna run around');
+  });
+
+  test('ass subtitles', () {
+    final file = File(r'test\files\sub_lrc.ass');
+    final content = file.readLrcStringSync();
+
+    expect(SubtitleParser.detectFormat(content), SubtitleFormat.ssa);
+    final parsed = SubtitleParser.parse(content);
+
+    expect(parsed.title, 'Never Gonna Give You Up');
+    expect(parsed.author, 'Rick Astley');
+    expect(parsed.lyrics.length, 3);
+    expect(parsed.lyrics[0].readableText, 'Never gonna give you up');
+    expect(parsed.lyrics[1].type, LrcTypes.enhanced);
+    expect(parsed.lyrics[1].parts?.length, 5);
+    expect(parsed.lyrics[1].readableText, 'Never gonna let you down');
+    expect(parsed.lyrics[1].parts?.first.endTimestamp,
+        const Duration(milliseconds: 5000));
+    expect(parsed.lyrics[1].parts?.last.endTimestamp,
+        const Duration(seconds: 8));
+    expect(parsed.lyrics[2].readableText,
+        'Never gonna run around, and desert you');
+    expect(parsed.lyrics[2].person, 2);
+    expect(parsed.personCount, 2);
+  });
 }
