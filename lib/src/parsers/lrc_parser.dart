@@ -27,17 +27,47 @@ class LrcParser {
     return lyric.split(RegExp(r'(\s{2,}|\|)(?=\S)'));
   }
 
+  static final _partRegex =
+      RegExp(r'([^<\]]*)<(([0-9]{1,}):([0-9]{1,})(?:\.([0-9]{1,}))?)>');
+
+  /// Collapses runs of whitespace into a single space,
+  /// returning [s] itself when nothing needs collapsing.
+  static String _collapseSpaces(String s) {
+    final length = s.length;
+    var i = 0;
+    for (; i < length - 1; i++) {
+      if (_isEmptyCodeUnit(s.codeUnitAt(i)) &&
+          _isEmptyCodeUnit(s.codeUnitAt(i + 1))) {
+        break;
+      }
+    }
+    if (i >= length - 1) return s;
+    final buffer = StringBuffer(s.substring(0, i + 1));
+    var previousWasSpace = true;
+    for (i++; i < length; i++) {
+      final c = s.codeUnitAt(i);
+      if (_isEmptyCodeUnit(c)) {
+        if (previousWasSpace) continue;
+        previousWasSpace = true;
+        buffer.writeCharCode(0x20);
+      } else {
+        previousWasSpace = false;
+        buffer.writeCharCode(c);
+      }
+    }
+    return buffer.toString();
+  }
+
   static Iterable<LrcLinePart> extractTimeStampPartFromLine(String line,
       {Duration? startTimeStamp}) sync* {
     var isFirst = true;
     var latestTimeStamp = startTimeStamp;
-    for (var j in RegExp(r'([^<\]]*)<(([0-9]{1,}):([0-9]{1,})\.([0-9]{1,})?)>')
-        .allMatches(line)) {
-      final lyrics = j.group(1) ?? '';
-      final endTimestamp = Duration(
-        minutes: int.tryParse(j.group(3)!) ?? 0,
-        seconds: int.tryParse(j.group(4)!) ?? 0,
-        milliseconds: (int.tryParse(j.group(5)!) ?? 0),
+    for (var j in _partRegex.allMatches(line)) {
+      final lyrics = _collapseSpaces(j.group(1) ?? '');
+      final endTimestamp = _LRCMultiTimestampParser._durationFromStrings(
+        minutes: j.group(3),
+        seconds: j.group(4),
+        hundreds: j.group(5),
       );
       final startTimestamp = latestTimeStamp;
       latestTimeStamp = endTimestamp;
@@ -164,19 +194,14 @@ class LrcParser {
           }
 
           if (!lyric.endsWith('>')) {
-            try {
-              for (var start = lineIndex + 1;
-                  lineIndex < lines.length;
-                  lineIndex++) {
-                final nextLine = lines[start];
-                final nextTimestamp =
-                    _LRCMultiTimestampParser.extractMainTimestamp(nextLine);
-                if (nextTimestamp != null) {
-                  lyric = '$lyric<$nextTimestamp>';
-                  break;
-                }
+            for (var next = lineIndex + 1; next < lines.length; next++) {
+              final nextTimestamp =
+                  _LRCMultiTimestampParser.extractMainTimestamp(lines[next]);
+              if (nextTimestamp != null) {
+                lyric = '$lyric<$nextTimestamp>';
+                break;
               }
-            } catch (_) {}
+            }
           }
           parts.addAll(
             extractTimeStampPartFromLine(

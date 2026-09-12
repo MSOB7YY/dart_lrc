@@ -89,10 +89,10 @@ Somewhere in these eyes, I'm on your side
     final file = File(r'test\files\timed_lrc_6.lrc');
     final parsed = Lrc.parse(file.readLrcStringSync());
 
-    expect(parsed.lyrics.length, 37);
+    expect(parsed.lyrics.length, 38);
     expect(parsed.lyrics[0].parts?.length, 5);
-    expect(parsed.lyrics[0].readableText,
-        'Cigarettes,  cigarettes  out  the  window');
+    expect(
+        parsed.lyrics[0].readableText, 'Cigarettes, cigarettes out the window');
   });
 
   test('word synced lyrics 7 - utf16_le_bom', () {
@@ -109,6 +109,19 @@ Somewhere in these eyes, I'm on your side
 
     expect(parsed.lyrics.length, 83);
     expect(parsed.lyrics[1].readableText.trim(), 'Just to save you');
+  });
+
+  test('word synced lyrics 10 - empty lines & double spaces', () {
+    final file = File(r'test\files\timed_lrc_10.lrc');
+    final parsed = Lrc.parse(file.readLrcStringSync());
+
+    expect(parsed.lyrics.length, 113);
+    expect(parsed.lyrics[1].parts?.length, 3);
+    expect(parsed.lyrics[1].parts?[0].startTimestamp.inMilliseconds, 9970);
+    expect(parsed.lyrics[1].readableText, r'$, One Time!');
+    expect(
+        parsed.lyrics[7].readableText, 'Hai Sab Kuchh Mast (Sab Kuchh Mast)');
+    expect(parsed.lyrics[111].parts?.last.endTimestamp.inMilliseconds, 177260);
   });
 
   test('ttml lyrics', () async {
@@ -187,8 +200,8 @@ Somewhere in these eyes, I'm on your side
     expect(parsed.lyrics[1].readableText, 'Never gonna let you down');
     expect(parsed.lyrics[1].parts?.first.startTimestamp,
         const Duration(milliseconds: 4500));
-    expect(parsed.lyrics[1].parts?.last.endTimestamp,
-        const Duration(seconds: 8));
+    expect(
+        parsed.lyrics[1].parts?.last.endTimestamp, const Duration(seconds: 8));
     expect(
         parsed.lyrics[2].readableText, 'Never gonna run around & desert you');
   });
@@ -222,8 +235,8 @@ Somewhere in these eyes, I'm on your side
     expect(parsed.lyrics[1].readableText, 'Never gonna let you down');
     expect(parsed.lyrics[1].parts?.first.endTimestamp,
         const Duration(milliseconds: 5000));
-    expect(parsed.lyrics[1].parts?.last.endTimestamp,
-        const Duration(seconds: 8));
+    expect(
+        parsed.lyrics[1].parts?.last.endTimestamp, const Duration(seconds: 8));
     expect(parsed.lyrics[2].readableText,
         'Never gonna run around, and desert you');
     expect(parsed.lyrics[2].person, 2);

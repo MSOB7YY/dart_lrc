@@ -15,7 +15,7 @@ class _LRCMultiTimestampParser {
       final minutes = m.group(1);
       if (minutes != null) {
         final seconds = m.group(2) ?? '00';
-        final hundreds = m.group(3) ?? '00';
+        final hundreds = m.group(3) ?? '.00';
         return '$minutes:$seconds$hundreds';
       }
     } catch (_) {}
@@ -54,24 +54,26 @@ class _LRCMultiTimestampParser {
     required String? seconds,
     required String? hundreds,
   }) {
-    if (hundreds != null) {
-      var zerosToAdd = 6 - hundreds.length;
-      while (zerosToAdd > 0) {
-        hundreds = hundreds! + '0';
-        zerosToAdd--;
-      }
-    }
-
     final m = minutes == null ? null : int.tryParse(minutes);
     final s = seconds == null ? null : int.tryParse(seconds);
-    final micros = hundreds == null ? null : int.tryParse(hundreds);
+    var micros = 0;
+    if (hundreds != null) {
+      final length = hundreds.length;
+      if (length >= 6) {
+        micros = int.tryParse(hundreds.substring(0, 6)) ?? 0;
+      } else {
+        micros = (int.tryParse(hundreds) ?? 0) * _microsScale[length];
+      }
+    }
 
     return Duration(
       minutes: m ?? 0,
       seconds: s ?? 0,
-      microseconds: micros ?? 0,
+      microseconds: micros,
     );
   }
+
+  static const _microsScale = [1000000, 100000, 10000, 1000, 100, 10];
 }
 
 class _MultiTimeStampDetails {
