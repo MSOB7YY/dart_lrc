@@ -34,7 +34,7 @@ extension LrcExtensions on Lrc {
     double multiplier, {
     Duration durationDifferenceToInsertEmptyLine = const Duration(seconds: 1),
     Duration extraOffsetDuration = Duration.zero,
-    bool romanize = false,
+    String Function(String text)? romanizer,
   }) {
     final originalLyrics = lyrics;
     final offsetDuration =
@@ -58,6 +58,15 @@ extension LrcExtensions on Lrc {
       final indicesList = highlightTimestampsMap[lineTimeStampEdited] ??= [];
       indicesList.add(index + indexExtra);
       uiLyricsLines.add(newLrcLine);
+      if (romanizer != null) {
+        final romanized =
+            _romanized(newLrcLine, index, lineTimeStampEdited, romanizer);
+        if (romanized != null) {
+          indexExtra++;
+          indicesList.add(index + indexExtra);
+          uiLyricsLines.add(romanized);
+        }
+      }
       final newParts = newLrcLine.parts;
       if (newParts != null) {
         try {
@@ -90,12 +99,6 @@ extension LrcExtensions on Lrc {
             }
           }
         } catch (_) {}
-      }
-      if (romanize) {
-        final romanized = _romanized(newLrcLine, index, lineTimeStampEdited);
-        if (romanized != null) {
-          uiLyricsLines.add(romanized);
-        }
       }
     }
     return (
@@ -134,78 +137,29 @@ List<LrcLinePart>? _mergeParts(
   return merged;
 }
 
-const _kanaKit = KanaKit(
-  config: KanaKitConfig(
-    passRomaji: true,
-    passKanji: false,
-    upcaseKatakana: true,
-  ),
-);
-
-String? _toRomajiOrNull(String txt) {
-  if (txt.isNotEmpty) {
-    return _kanaKit.toRomaji(txt);
-  }
-  return null;
-}
-
-String _toRomajiOrOriginal(String txt) {
-  return _toRomajiOrNull(txt) ?? txt;
-}
-
-LrcLine? _romanized(LrcLine line, int index, Duration lineTimestamp) {
-  LrcLine? romanizedLine;
+LrcLine? _romanized(
+  LrcLine line,
+  int index,
+  Duration lineTimestamp,
+  String Function(String text) romanizer,
+) {
   final parts = line.parts;
-  if (parts != null && parts.isNotEmpty) {
-    var hasRomajiPart = false;
-    final romanizedParts = <LrcLinePart>[];
-    for (final p in parts) {
-      final romanizedPart = _toRomajiOrNull(p.lyrics);
-      if (romanizedPart != null && romanizedPart != p.lyrics) {
-        hasRomajiPart = true;
-      }
-      // -- always add to retain order
-      romanizedParts.add(
-        LrcLinePart(
-          startTimestamp: p.startTimestamp,
-          endTimestamp: p.endTimestamp,
-          lyrics: romanizedPart ?? p.lyrics,
-        ),
-      );
-    }
-    if (hasRomajiPart) {
-      final romanized = _toRomajiOrOriginal(line.lyrics);
-      final readableText = romanizedParts.map((e) => e.lyrics).join();
-      romanizedLine = LrcLine(
-        timestamp: lineTimestamp,
-        originalIndex: index - 0.1,
-        lyrics: romanized,
-        readableText: readableText,
-        type: line.type,
-        parts: romanizedParts,
-        person: line.person,
-        isRTL: LrcParser.isLrcLineRTL(readableText),
-      );
-    }
-  } else {
-    final txt = line.lyrics;
-    final romanized = _toRomajiOrNull(txt);
-    if (romanized != null && romanized != txt) {
-      final readableText = romanized;
-      romanizedLine = LrcLine(
-        timestamp: lineTimestamp,
-        originalIndex: index - 0.1,
-        lyrics: romanized,
-        readableText: readableText,
-        type: line.type,
-        parts: parts,
-        person: line.person,
-        isRTL: LrcParser.isLrcLineRTL(readableText),
-      );
-    }
-  }
-
-  return romanizedLine;
+  final txt = parts != null && parts.isNotEmpty
+      ? parts.map((e) => e.lyrics).join()
+      : line.lyrics;
+  if (txt.isEmpty) return null;
+  final romanized = romanizer(txt);
+  if (romanized == txt) return null;
+  return LrcLine(
+    timestamp: lineTimestamp,
+    originalIndex: index + 0.05,
+    lyrics: romanized,
+    readableText: romanized,
+    type: line.type,
+    parts: null,
+    person: line.person,
+    isRTL: LrcParser.isLrcLineRTL(romanized),
+  );
 }
 
 /// Handy extensions on strings
