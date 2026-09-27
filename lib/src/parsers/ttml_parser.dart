@@ -6,8 +6,7 @@ class TtmlParser {
     _TtmlLineExtractorXml(),
   ];
 
-  static bool isValid(String content) =>
-      _extractors.any((extr) => extr.isValid(content));
+  static bool isValid(String content) => _extractors.any((extr) => extr.isValid(content));
 
   static Lrc parse(String content) {
     Lrc? lrc;
@@ -40,17 +39,12 @@ class TtmlParser {
           textNormalized = '';
         }
         final indexOfPartStart = textNormalized.indexOf('<');
-        final personText = indexOfPartStart > 0
-            ? textNormalized.substring(0, indexOfPartStart)
-            : '';
+        final personText = indexOfPartStart > 0 ? textNormalized.substring(0, indexOfPartStart) : '';
         final person = personToIndex[personText] ??= personToIndex.length + 1;
-        var parts =
-            LrcParser.extractTimeStampPartFromLine(textNormalized).toList();
+        var parts = LrcParser.extractTimeStampPartFromLine(textNormalized).toList();
         final lineType = parts.isNotEmpty ? LrcTypes.enhanced : LrcTypes.simple;
         if (lineType == LrcTypes.enhanced) type = LrcTypes.enhanced;
-        final readableText = parts.isNotEmpty
-            ? parts.map((e) => e.lyrics).join()
-            : textNormalized;
+        final readableText = parts.isNotEmpty ? parts.map((e) => e.lyrics).join() : textNormalized;
         lrcLines.add(LrcLine(
           timestamp: Duration(milliseconds: startMS),
           originalIndex: lrcLines.length,
@@ -114,12 +108,7 @@ class _TtmlLineExtractorXml extends _TtmlLineExtractorBase<XmlElement> {
 
   @override
   String? extractText(XmlElement p) {
-    final spans = p
-        .findElements('span')
-        .where((s) =>
-            s.getAttribute('ttm:role') != 'x-bg' &&
-            s.getAttribute('begin') != null)
-        .toList();
+    final spans = p.findElements('span').where((s) => s.getAttribute('ttm:role') != 'x-bg' && s.getAttribute('begin') != null).toList();
 
     if (spans.isEmpty) return p.innerText.trim();
     if (spans.length == 1) return spans.first.innerText.trim();
@@ -162,10 +151,7 @@ class _TtmlLineExtractorXml extends _TtmlLineExtractorBase<XmlElement> {
       milliseconds = int.tryParse(msString) ?? 0;
     }
 
-    return (hours * 3_600_000) +
-        (minutes * 60_000) +
-        (seconds * 1_000) +
-        milliseconds;
+    return (hours * 3_600_000) + (minutes * 60_000) + (seconds * 1_000) + milliseconds;
   }
 }
 
@@ -213,10 +199,8 @@ class _TtmlLineExtractorRegex extends _TtmlLineExtractorBase<RegExpMatch> {
 
     final buffer = StringBuffer();
     for (final span in spans) {
-      final beginMs =
-          _TtmlLineExtractorXml._timestampToMilliseconds(span.group(1)!);
-      buffer.write(
-          '<${_TtmlLineExtractorXml._msToLrcTimestamp(beginMs)}>${span.group(2)?.trim()} ');
+      final beginMs = _TtmlLineExtractorXml._timestampToMilliseconds(span.group(1)!);
+      buffer.write('<${_TtmlLineExtractorXml._msToLrcTimestamp(beginMs)}>${span.group(2)?.trim()} ');
     }
     final end = m.group(2);
     if (end != null) {

@@ -7,18 +7,8 @@ extension LrcLineExtensions on List<LrcLine> {
     for (var i = 0; i < length; i++) {
       var lineCurrent = this[i];
       var lineNext = (i + 1 < length) ? this[i + 1] : null;
-      var durationToNext = (lineNext != null)
-          ? Duration(
-              milliseconds: lineNext.timestamp.inMilliseconds -
-                  lineCurrent.timestamp.inMilliseconds)
-          : null;
-      yield LrcStream(
-          duration: durationToNext,
-          previous: (i != 0) ? this[i - 1] : null,
-          current: lineCurrent,
-          next: lineNext,
-          position: i,
-          length: length - 1);
+      var durationToNext = (lineNext != null) ? Duration(milliseconds: lineNext.timestamp.inMilliseconds - lineCurrent.timestamp.inMilliseconds) : null;
+      yield LrcStream(duration: durationToNext, previous: (i != 0) ? this[i - 1] : null, current: lineCurrent, next: lineNext, position: i, length: length - 1);
       if (durationToNext != null) {
         await Future.delayed(durationToNext);
       }
@@ -37,8 +27,7 @@ extension LrcExtensions on Lrc {
     String Function(String text)? romanizer,
   }) {
     final originalLyrics = lyrics;
-    final offsetDuration =
-        Duration(milliseconds: this.offset ?? 0) - extraOffsetDuration;
+    final offsetDuration = Duration(milliseconds: this.offset ?? 0) - extraOffsetDuration;
     final offsetValid = offsetDuration != Duration.zero;
     final multiplierValid = multiplier != 0 && multiplier != 1;
     Duration toUiTimestamp(Duration timestamp) {
@@ -48,11 +37,9 @@ extension LrcExtensions on Lrc {
       return uiTimestamp;
     }
 
-    final partsToUiTimestamp =
-        offsetValid || multiplierValid ? toUiTimestamp : null;
+    final partsToUiTimestamp = offsetValid || multiplierValid ? toUiTimestamp : null;
     final uiLyricsLines = <LrcLine>[];
-    final highlightTimestampsMap =
-        <Duration, List<int>>{}; // timestamp: [index]
+    final highlightTimestampsMap = <Duration, List<int>>{}; // timestamp: [index]
     var indexExtra = 0;
     for (var index = 0; index < originalLyrics.length; index++) {
       final ogItem = originalLyrics[index];
@@ -67,8 +54,7 @@ extension LrcExtensions on Lrc {
       indicesList.add(index + indexExtra);
       uiLyricsLines.add(newLrcLine);
       if (romanizer != null) {
-        final romanized =
-            _romanized(newLrcLine, index, lineTimeStampEdited, romanizer);
+        final romanized = _romanized(newLrcLine, index, lineTimeStampEdited, romanizer);
         if (romanized != null) {
           indexExtra++;
           indicesList.add(index + indexExtra);
@@ -78,14 +64,11 @@ extension LrcExtensions on Lrc {
       final newParts = newLrcLine.parts;
       if (newParts != null) {
         try {
-          final nextLine = index == originalLyrics.length - 1
-              ? null
-              : originalLyrics[index + 1];
+          final nextLine = index == originalLyrics.length - 1 ? null : originalLyrics[index + 1];
           if (nextLine != null) {
             final partEndTimestamp = newParts.last.endTimestamp;
             final nextLineTimestamp = toUiTimestamp(nextLine.timestamp);
-            if ((nextLineTimestamp - partEndTimestamp) >
-                durationDifferenceToInsertEmptyLine) {
+            if ((nextLineTimestamp - partEndTimestamp) > durationDifferenceToInsertEmptyLine) {
               // -- insert empty line to allow dynamic lrc view to hide lrc during long transitions
               indexExtra++;
               final emptyLineIndex = index + indexExtra;
@@ -102,8 +85,7 @@ extension LrcExtensions on Lrc {
                   isRTL: false,
                 ),
               );
-              final indicesList =
-                  highlightTimestampsMap[partEndTimestamp] ??= [];
+              final indicesList = highlightTimestampsMap[partEndTimestamp] ??= [];
               indicesList.add(emptyLineIndex);
             }
           }
@@ -129,8 +111,7 @@ List<LrcLinePart>? _mergeParts(
 
   for (var i = 1; i < parts.length; i++) {
     final next = parts[i];
-    final duration = current.endTimestamp.inMilliseconds -
-        current.startTimestamp.inMilliseconds;
+    final duration = current.endTimestamp.inMilliseconds - current.startTimestamp.inMilliseconds;
 
     if (duration < minDurationMs) {
       current = LrcLinePart(
@@ -166,9 +147,7 @@ LrcLine? _romanized(
   String Function(String text) romanizer,
 ) {
   final parts = line.parts;
-  final txt = parts != null && parts.isNotEmpty
-      ? parts.map((e) => e.lyrics).join()
-      : line.lyrics;
+  final txt = parts != null && parts.isNotEmpty ? parts.map((e) => e.lyrics).join() : line.lyrics;
   if (txt.isEmpty) return null;
   final romanized = romanizer(txt);
   if (romanized == txt) return null;

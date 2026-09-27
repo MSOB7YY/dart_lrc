@@ -29,15 +29,11 @@ class SubtitleParser {
   static final _tagRegex = RegExp(r'</?[a-zA-Z][^>]*>');
   static final _braceTagRegex = RegExp(r'\{[^{}]*\}');
 
-  static final _srtTimingRegex = RegExp(
-      r'(\d{1,2}:\d{1,2}:\d{1,2}[,.]\d{1,3})\s*-->\s*(\d{1,2}:\d{1,2}:\d{1,2}[,.]\d{1,3})');
-  static final _vttTimingRegex = RegExp(
-      r'((?:\d{1,2}:)?\d{1,2}:\d{2}\.\d{1,3})\s*-->\s*((?:\d{1,2}:)?\d{1,2}:\d{2}\.\d{1,3})');
-  static final _vttInlineTimestampRegex =
-      RegExp(r'<((?:\d{1,2}:)?\d{1,2}:\d{2}\.\d{1,3})>');
+  static final _srtTimingRegex = RegExp(r'(\d{1,2}:\d{1,2}:\d{1,2}[,.]\d{1,3})\s*-->\s*(\d{1,2}:\d{1,2}:\d{1,2}[,.]\d{1,3})');
+  static final _vttTimingRegex = RegExp(r'((?:\d{1,2}:)?\d{1,2}:\d{2}\.\d{1,3})\s*-->\s*((?:\d{1,2}:)?\d{1,2}:\d{2}\.\d{1,3})');
+  static final _vttInlineTimestampRegex = RegExp(r'<((?:\d{1,2}:)?\d{1,2}:\d{2}\.\d{1,3})>');
   static final _vttVoiceRegex = RegExp(r'<v(?:\.[^\s>]*)?\s+([^>]+)>');
-  static final _sbvTimingRegex = RegExp(
-      r'^\s*(\d{1,2}:\d{2}:\d{2}\.\d{1,3})\s*,\s*(\d{1,2}:\d{2}:\d{2}\.\d{1,3})\s*$');
+  static final _sbvTimingRegex = RegExp(r'^\s*(\d{1,2}:\d{2}:\d{2}\.\d{1,3})\s*,\s*(\d{1,2}:\d{2}:\d{2}\.\d{1,3})\s*$');
   static final _assKaraokeRegex = RegExp(r'\\[kK][fo]?(\d+)');
 
   static bool isValid(String content) => detectFormat(content) != null;
@@ -55,8 +51,7 @@ class SubtitleParser {
       }
     }
     if (content.startsWith('WEBVTT', start)) return SubtitleFormat.vtt;
-    if (content.contains('Dialogue:') &&
-        (content.contains('[Events]') || content.contains('[Script Info]'))) {
+    if (content.contains('Dialogue:') && (content.contains('[Events]') || content.contains('[Script Info]'))) {
       return SubtitleFormat.ssa;
     }
     if (_srtTimingRegex.hasMatch(content)) return SubtitleFormat.srt;
@@ -76,8 +71,7 @@ class SubtitleParser {
       SubtitleFormat.vtt => parseVtt(content),
       SubtitleFormat.sbv => parseSbv(content),
       SubtitleFormat.ssa => parseSsa(content),
-      null => throw const FormatException(
-          'The inputted string is not a valid subtitle format'),
+      null => throw const FormatException('The inputted string is not a valid subtitle format'),
     };
   }
 
@@ -94,9 +88,7 @@ class SubtitleParser {
         final textLine = lines[i].trim();
         if (textLine.isEmpty) break;
         // -- tolerate a missing blank line before the next cue
-        if (int.tryParse(textLine) != null &&
-            i + 1 < lines.length &&
-            _srtTimingRegex.hasMatch(lines[i + 1])) {
+        if (int.tryParse(textLine) != null && i + 1 < lines.length && _srtTimingRegex.hasMatch(lines[i + 1])) {
           i--;
           break;
         }
@@ -122,9 +114,7 @@ class SubtitleParser {
         if (trimmed.isEmpty) skipBlock = false;
         continue;
       }
-      if (trimmed.startsWith('NOTE') ||
-          trimmed.startsWith('STYLE') ||
-          trimmed.startsWith('REGION')) {
+      if (trimmed.startsWith('NOTE') || trimmed.startsWith('STYLE') || trimmed.startsWith('REGION')) {
         skipBlock = true;
         continue;
       }
@@ -147,8 +137,7 @@ class SubtitleParser {
         var lastIndex = 0;
         var segStartMs = startMs;
         for (final im in _vttInlineTimestampRegex.allMatches(text)) {
-          final segText =
-              _cleanMarkup(text.substring(lastIndex, im.start), trim: false);
+          final segText = _cleanMarkup(text.substring(lastIndex, im.start), trim: false);
           final stampMs = _timestampToMs(im.group(1)!);
           if (segText.isNotEmpty) {
             parts.add(LrcLinePart(
@@ -222,11 +211,7 @@ class SubtitleParser {
         continue;
       }
       if (line.startsWith('Format:')) {
-        final fields = line
-            .substring(7)
-            .split(',')
-            .map((f) => f.trim().toLowerCase())
-            .toList();
+        final fields = line.substring(7).split(',').map((f) => f.trim().toLowerCase()).toList();
         final s = fields.indexOf('start');
         final e = fields.indexOf('end');
         final t = fields.indexOf('text');
@@ -245,9 +230,7 @@ class SubtitleParser {
         if (fields.length <= textIdx) continue;
         final startMs = _timestampToMs(fields[startIdx].trim());
         final endMs = _timestampToMs(fields[endIdx].trim());
-        final speaker = nameIdx >= 0 && nameIdx < fields.length
-            ? fields[nameIdx].trim()
-            : null;
+        final speaker = nameIdx >= 0 && nameIdx < fields.length ? fields[nameIdx].trim() : null;
         // -- the text field is always last, commas inside it are allowed
         final text = fields.sublist(textIdx).join(',');
         cues.add(_SubtitleCue(
@@ -334,8 +317,7 @@ class SubtitleParser {
         readableText = parts.map((e) => e.lyrics).join();
         final buffer = StringBuffer();
         for (final p in parts) {
-          buffer.write(
-              '<${_msToInlineTimestamp(p.startTimestamp.inMilliseconds)}>${p.lyrics}');
+          buffer.write('<${_msToInlineTimestamp(p.startTimestamp.inMilliseconds)}>${p.lyrics}');
         }
         buffer.write('<${_msToInlineTimestamp(cue.endMs)}>');
         lyrics = buffer.toString();
@@ -371,8 +353,7 @@ class SubtitleParser {
 
     // -- ssa/ass dialogues are not guaranteed to be in order
     lines.sort((a, b) {
-      final res =
-          a.timestamp.inMicroseconds.compareTo(b.timestamp.inMicroseconds);
+      final res = a.timestamp.inMicroseconds.compareTo(b.timestamp.inMicroseconds);
       if (res == 0) return a.originalIndex.compareTo(b.originalIndex);
       return res;
     });
@@ -389,8 +370,7 @@ class SubtitleParser {
     );
   }
 
-  static int _timestampToMs(String raw) =>
-      _TtmlLineExtractorXml._timestampToMilliseconds(raw.replaceAll(',', '.'));
+  static int _timestampToMs(String raw) => _TtmlLineExtractorXml._timestampToMilliseconds(raw.replaceAll(',', '.'));
 
   static String _msToInlineTimestamp(int ms) {
     final minutes = ms ~/ 60000;
@@ -408,10 +388,7 @@ class SubtitleParser {
   }
 
   static String _cleanAssText(String text, {bool trim = true}) {
-    var t = text
-        .replaceAll(r'\N', ' ')
-        .replaceAll(r'\n', ' ')
-        .replaceAll(r'\h', ' ');
+    var t = text.replaceAll(r'\N', ' ').replaceAll(r'\n', ' ').replaceAll(r'\h', ' ');
     return trim ? t.trim() : t;
   }
 }

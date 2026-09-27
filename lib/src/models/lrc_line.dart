@@ -56,9 +56,9 @@ class LrcLine {
     String f(int x) => x.toString().padLeft(2, '0');
 
     // LRC format doesn't accept hours.
-    final minutes = timestamp.inMinutes % 60,
-        seconds = timestamp.inSeconds % 60,
-        hundreds = timestamp.inMilliseconds % 1000 ~/ 10;
+    final minutes = timestamp.inMinutes % 60;
+    final seconds = timestamp.inSeconds % 60;
+    final hundreds = timestamp.inMilliseconds % 1000 ~/ 10;
 
     return '[${f(minutes)}:${f(seconds)}.${f(hundreds)}]$lyrics';
   }

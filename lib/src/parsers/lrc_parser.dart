@@ -27,8 +27,7 @@ class LrcParser {
     return lyric.split(RegExp(r'(\s{2,}|\|)(?=\S)'));
   }
 
-  static final _partRegex =
-      RegExp(r'([^<\]]*)<(([0-9]{1,}):([0-9]{1,})(?:\.([0-9]{1,}))?)>');
+  static final _partRegex = RegExp(r'([^<\]]*)<(([0-9]{1,}):([0-9]{1,})(?:\.([0-9]{1,}))?)>');
 
   /// Collapses runs of whitespace into a single space,
   /// returning [s] itself when nothing needs collapsing.
@@ -36,8 +35,7 @@ class LrcParser {
     final length = s.length;
     var i = 0;
     for (; i < length - 1; i++) {
-      if (_isEmptyCodeUnit(s.codeUnitAt(i)) &&
-          _isEmptyCodeUnit(s.codeUnitAt(i + 1))) {
+      if (_isEmptyCodeUnit(s.codeUnitAt(i)) && _isEmptyCodeUnit(s.codeUnitAt(i + 1))) {
         break;
       }
     }
@@ -60,9 +58,7 @@ class LrcParser {
 
   static const _kTrailingPartFallbackDuration = Duration(seconds: 1);
 
-  static Iterable<LrcLinePart> extractTimeStampPartFromLine(String line,
-          {Duration? startTimeStamp}) =>
-      _extractParts(line, startTimeStamp, null, 0);
+  static Iterable<LrcLinePart> extractTimeStampPartFromLine(String line, {Duration? startTimeStamp}) => _extractParts(line, startTimeStamp, null, 0);
 
   static Iterable<LrcLinePart> _extractParts(
     String line,
@@ -96,9 +92,7 @@ class LrcParser {
           continue;
         }
         // -- skip first part that has `v1:` etc
-        if (lyrics.length < 5 &&
-            lyrics.startsWith('v') &&
-            (lyrics.endsWith(':') || lyrics.endsWith(': '))) {
+        if (lyrics.length < 5 && lyrics.startsWith('v') && (lyrics.endsWith(':') || lyrics.endsWith(': '))) {
           continue;
         }
       }
@@ -117,14 +111,9 @@ class LrcParser {
     final trailingLyrics = _collapseSpaces(line.substring(trailingIndex));
     if (trailingLyrics.trim().isEmpty) return;
     final trailingStart = latestTimeStamp;
-    var trailingEnd = followingLines == null
-        ? null
-        : _nextLineTimestampAfter(
-            followingLines, followingLinesStart, trailingStart);
+    var trailingEnd = followingLines == null ? null : _nextLineTimestampAfter(followingLines, followingLinesStart, trailingStart);
     if (trailingEnd == null) {
-      final averageDuration = firstPartStart == null
-          ? _kTrailingPartFallbackDuration
-          : (trailingStart - firstPartStart) ~/ partsCount;
+      final averageDuration = firstPartStart == null ? _kTrailingPartFallbackDuration : (trailingStart - firstPartStart) ~/ partsCount;
       trailingEnd = trailingStart + averageDuration;
     }
     yield LrcLinePart(
@@ -173,16 +162,7 @@ class LrcParser {
     var lines = _splitLines(content);
 
     // temporary storer variables
-    String? artist,
-        album,
-        title,
-        length,
-        author,
-        creator,
-        offset,
-        program,
-        version,
-        language;
+    String? artist, album, title, length, author, creator, offset, program, version, language;
     LrcTypes? type;
     var lyrics = <LrcLine>[];
 
@@ -190,10 +170,7 @@ class LrcParser {
     var registeredTimestamps = <Duration>{};
     var shouldSortLyrics = false;
 
-    String? setIfMatchTag(String toMatch, String tag) =>
-        (RegExp(r'^\[' + tag + r':.*\]$').hasMatch(toMatch))
-            ? toMatch.substring(tag.length + 2, toMatch.length - 1).trim()
-            : null;
+    String? setIfMatchTag(String toMatch, String tag) => (RegExp(r'^\[' + tag + r':.*\]$').hasMatch(toMatch)) ? toMatch.substring(tag.length + 2, toMatch.length - 1).trim() : null;
 
     // loop thru each lines
     for (var lineIndex = 0; lineIndex < lines.length; lineIndex++) {
@@ -222,8 +199,7 @@ class LrcParser {
             // -- means it has multi timestamps
             shouldSortLyrics = true;
           }
-          if (timestamps
-              .any((element) => registeredTimestamps.contains(element))) {
+          if (timestamps.any((element) => registeredTimestamps.contains(element))) {
             // -- means it has multi language in the end of the file
             shouldSortLyrics = true;
           }
@@ -234,9 +210,7 @@ class LrcParser {
         // checkers for different types of LRCs
         if (lyric.contains(RegExp(r'<[0-9]{1,}:[0-9]{1,}(\.[0-9]{1,})?>'))) {
           // if enhanced
-          type = (type == LrcTypes.extended)
-              ? LrcTypes.extended_enhanced
-              : LrcTypes.enhanced;
+          type = (type == LrcTypes.extended) ? LrcTypes.extended_enhanced : LrcTypes.enhanced;
           parts = [];
           lineType = LrcTypes.enhanced;
 
@@ -246,8 +220,7 @@ class LrcParser {
             person = personToIndex[personText];
             if (person == null) {
               try {
-                final numberString =
-                    RegExp(r'v(\d+):').firstMatch(personText)?[1];
+                final numberString = RegExp(r'v(\d+):').firstMatch(personText)?[1];
                 if (numberString != null) {
                   person = int.tryParse(numberString);
                 }
@@ -263,9 +236,7 @@ class LrcParser {
           );
         } else if (lyric.contains(RegExp(r'^\w:'))) {
           //if extended
-          type = (type == LrcTypes.enhanced)
-              ? LrcTypes.extended_enhanced
-              : LrcTypes.extended;
+          type = (type == LrcTypes.enhanced) ? LrcTypes.extended_enhanced : LrcTypes.extended;
 
           final personText = lyric[0];
           person = personToIndex[personText] ??= personToIndex.length + 1;
@@ -291,28 +262,21 @@ class LrcParser {
               personToIndex[personText] = person;
             }
             var prefixEnd = colonEnd;
-            while (
-                prefixEnd < lyric.length && lyric.codeUnitAt(prefixEnd) == 32) {
+            while (prefixEnd < lyric.length && lyric.codeUnitAt(prefixEnd) == 32) {
               prefixEnd++;
             }
             lyric = lyric.substring(prefixEnd);
           }
         }
 
-        final lyricSplit = parts != null && parts.length > 1
-            ? List.filled(1, lyric, growable: false)
-            : splitMultiLanguageLine(lyric);
+        final lyricSplit = parts != null && parts.length > 1 ? List.filled(1, lyric, growable: false) : splitMultiLanguageLine(lyric);
         for (var lyric in lyricSplit) {
-          final readableTextPre = parts != null && parts.isNotEmpty
-              ? parts.map((e) => e.lyrics).join()
-              : lyric;
+          final readableTextPre = parts != null && parts.isNotEmpty ? parts.map((e) => e.lyrics).join() : lyric;
           for (final linetimestamp in timestamps) {
             registeredTimestamps.add(linetimestamp);
-            final readableText =
-                readableTextPre.isNotEmpty ? readableTextPre : lyric;
+            final readableText = readableTextPre.isNotEmpty ? readableTextPre : lyric;
             final partsShift = linetimestamp - timestamps.first;
-            final lineParts =
-                parts == null ? null : _shiftParts(parts, partsShift);
+            final lineParts = parts == null ? null : _shiftParts(parts, partsShift);
             lyrics.add(LrcLine(
               timestamp: linetimestamp,
               originalIndex: lyrics.length,
@@ -352,8 +316,7 @@ class LrcParser {
 
     if (shouldSortLyrics) {
       lyrics.sort((a, b) {
-        final res =
-            a.timestamp.inMicroseconds.compareTo(b.timestamp.inMicroseconds);
+        final res = a.timestamp.inMicroseconds.compareTo(b.timestamp.inMicroseconds);
         if (res == 0) {
           return a.originalIndex.compareTo(b.originalIndex);
         }
@@ -361,8 +324,7 @@ class LrcParser {
       });
     }
 
-    var personCount =
-        personToIndex.values.where((element) => element > 0).length;
+    var personCount = personToIndex.values.where((element) => element > 0).length;
     if (personCount <= 0) personCount = 1;
 
     return Lrc(
@@ -403,12 +365,10 @@ class LrcParser {
   }
 
   /// Checks if the string [input] is a valid LRC using Regex.
-  static bool isValid(String input) =>
-      RegExp(r'\[(\d{1,}).+\]').hasMatch(input);
+  static bool isValid(String input) => RegExp(r'\[(\d{1,}).+\]').hasMatch(input);
 
   static String cleanPlainLyrics(String input) {
-    final regex = RegExp(
-        r'([\r\n]*\[((ti)|(a[rlu])|(by)|([rv]e)|(length)|(offset)|(la)):.+\][\r\n]*)');
+    final regex = RegExp(r'([\r\n]*\[((ti)|(a[rlu])|(by)|([rv]e)|(length)|(offset)|(la)):.+\][\r\n]*)');
     return input.replaceAll(regex, '');
   }
 
