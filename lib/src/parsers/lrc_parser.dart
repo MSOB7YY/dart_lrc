@@ -1,5 +1,6 @@
 part of lrc;
 
+// optimizations by claude
 class LrcParser {
   static List<String> _splitLines(String data) {
     var lines = <String>[];
@@ -23,11 +24,37 @@ class LrcParser {
     return lines;
   }
 
+  /// splits at `|` or 2+ spaces followed by a non-space, same as `split(RegExp(r'(\s{2,}|\|)(?=\S)'))`.
   static List<String> splitMultiLanguageLine(String lyric) {
-    return lyric.split(RegExp(r'(\s{2,}|\|)(?=\S)'));
+    List<String>? pieces;
+    final length = lyric.length;
+    var pieceStart = 0;
+    var i = 0;
+    while (i < length) {
+      final c = lyric.codeUnitAt(i);
+      var separatorEnd = i + 1;
+      if (_isRegexSpace(c)) {
+        while (separatorEnd < length && _isRegexSpace(lyric.codeUnitAt(separatorEnd))) {
+          separatorEnd++;
+        }
+        if (separatorEnd - i < 2) {
+          i = separatorEnd;
+          continue;
+        }
+      } else if (c != 0x7C /* | */) {
+        i++;
+        continue;
+      }
+      if (separatorEnd < length && !_isRegexSpace(lyric.codeUnitAt(separatorEnd))) {
+        (pieces ??= <String>[]).add(lyric.substring(pieceStart, i));
+        pieceStart = separatorEnd;
+      }
+      i = separatorEnd;
+    }
+    if (pieces == null) return [lyric];
+    pieces.add(lyric.substring(pieceStart));
+    return pieces;
   }
-
-  static final _partRegex = RegExp(r'([^<\]]*)<(([0-9]{1,}):([0-9]{1,})(?:\.([0-9]{1,}))?)>');
 
   /// Collapses runs of whitespace into a single space,
   /// returning [s] itself when nothing needs collapsing.
@@ -71,14 +98,25 @@ class LrcParser {
     var trailingIndex = 0;
     Duration? firstPartStart;
     var partsCount = 0;
-    for (var j in _partRegex.allMatches(line)) {
-      trailingIndex = j.end;
-      final lyrics = _collapseSpaces(j.group(1) ?? '');
-      final endTimestamp = _LRCMultiTimestampParser._durationFromStrings(
-        minutes: j.group(3),
-        seconds: j.group(4),
-        hundreds: j.group(5),
-      );
+    var textStart = 0;
+    final length = line.length;
+    for (var i = 0; i < length; i++) {
+      final c = line.codeUnitAt(i);
+      if (c == 0x5D /* ] */) {
+        textStart = i + 1;
+        continue;
+      }
+      if (c != 0x3C /* < */) continue;
+      final (:end, :micros) = _LRCMultiTimestampParser._scanTimestamp(line, i + 1, 0x3E /* > */);
+      if (end < 0) {
+        textStart = i + 1;
+        continue;
+      }
+      final lyrics = _collapseSpaces(line.substring(textStart, i));
+      final endTimestamp = Duration(microseconds: micros);
+      textStart = end;
+      trailingIndex = end;
+      i = end - 1;
       final startTimestamp = latestTimeStamp;
       latestTimeStamp = endTimestamp;
       if (startTimestamp == null) {
@@ -170,27 +208,41 @@ class LrcParser {
     var registeredTimestamps = <Duration>{};
     var shouldSortLyrics = false;
 
-    String? setIfMatchTag(String toMatch, String tag) => (RegExp(r'^\[' + tag + r':.*\]$').hasMatch(toMatch)) ? toMatch.substring(tag.length + 2, toMatch.length - 1).trim() : null;
-
     // loop thru each lines
     for (var lineIndex = 0; lineIndex < lines.length; lineIndex++) {
       var l = lines[lineIndex];
-      artist ??= setIfMatchTag(l, 'ar');
-      album ??= setIfMatchTag(l, 'al');
-      title ??= setIfMatchTag(l, 'ti');
-      author ??= setIfMatchTag(l, 'au');
-      length ??= setIfMatchTag(l, 'length');
-      creator ??= setIfMatchTag(l, 'by');
-      offset ??= setIfMatchTag(l, 'offset');
-      program ??= setIfMatchTag(l, 're');
-      version ??= setIfMatchTag(l, 've');
-      language ??= setIfMatchTag(l, 'la');
+      final tagColonIndex = _tagColonIndex(l);
+      if (tagColonIndex > 0) {
+        final tag = l.substring(1, tagColonIndex);
+        switch (tag) {
+          case 'ar':
+            artist ??= _tagValue(l, tagColonIndex);
+          case 'al':
+            album ??= _tagValue(l, tagColonIndex);
+          case 'ti':
+            title ??= _tagValue(l, tagColonIndex);
+          case 'au':
+            author ??= _tagValue(l, tagColonIndex);
+          case 'length':
+            length ??= _tagValue(l, tagColonIndex);
+          case 'by':
+            creator ??= _tagValue(l, tagColonIndex);
+          case 'offset':
+            offset ??= _tagValue(l, tagColonIndex);
+          case 're':
+            program ??= _tagValue(l, tagColonIndex);
+          case 've':
+            version ??= _tagValue(l, tagColonIndex);
+          case 'la':
+            language ??= _tagValue(l, tagColonIndex);
+        }
+      }
 
-      if (_LRCMultiTimestampParser._durRegex.hasMatch(l)) {
+      final lrclineDetails = _LRCMultiTimestampParser.parseLine(l);
+      if (lrclineDetails != null) {
         var lineType = LrcTypes.simple;
         List<LrcLinePart>? parts;
 
-        final lrclineDetails = _LRCMultiTimestampParser.parseLine(l);
         var lyric = lrclineDetails.lineText;
         final timestamps = lrclineDetails.timestamps;
 
@@ -199,16 +251,19 @@ class LrcParser {
             // -- means it has multi timestamps
             shouldSortLyrics = true;
           }
-          if (timestamps.any((element) => registeredTimestamps.contains(element))) {
-            // -- means it has multi language in the end of the file
-            shouldSortLyrics = true;
+          for (final timestamp in timestamps) {
+            if (registeredTimestamps.contains(timestamp)) {
+              // -- means it has multi language in the end of the file
+              shouldSortLyrics = true;
+              break;
+            }
           }
         }
 
         int? person;
 
         // checkers for different types of LRCs
-        if (lyric.contains(RegExp(r'<[0-9]{1,}:[0-9]{1,}(\.[0-9]{1,})?>'))) {
+        if (_hasWordTimestamp(lyric)) {
           // if enhanced
           type = (type == LrcTypes.extended) ? LrcTypes.extended_enhanced : LrcTypes.enhanced;
           parts = [];
@@ -234,7 +289,7 @@ class LrcParser {
           parts.addAll(
             _extractParts(lyric, timestamps.first, lines, lineIndex + 1),
           );
-        } else if (lyric.contains(RegExp(r'^\w:'))) {
+        } else if (_isExtendedLine(lyric)) {
           //if extended
           type = (type == LrcTypes.enhanced) ? LrcTypes.extended_enhanced : LrcTypes.extended;
 
@@ -294,9 +349,14 @@ class LrcParser {
 
     if (type == LrcTypes.enhanced || type == LrcTypes.extended_enhanced) {
       // extract bg tags
-      for (final m in RegExp(r'\[bg:(.*)\]').allMatches(content)) {
-        final text = m.group(1);
-        if (text == null) continue;
+      var bgIndex = content.indexOf('[bg:');
+      while (bgIndex >= 0) {
+        final textStart = bgIndex + 4;
+        final textEnd = _lastIndexOnLine(content, 0x5D /* ] */, textStart);
+        final nextSearchStart = textEnd < 0 ? bgIndex + 1 : textEnd + 1;
+        bgIndex = content.indexOf('[bg:', nextSearchStart);
+        if (textEnd < 0) continue;
+        final text = content.substring(textStart, textEnd);
         final parts = extractTimeStampPartFromLine(text).toList();
         if (parts.isEmpty) continue;
         final readableText = parts.map((e) => e.lyrics).join();
@@ -364,8 +424,65 @@ class LrcParser {
     return null;
   }
 
-  /// Checks if the string [input] is a valid LRC using Regex.
-  static bool isValid(String input) => RegExp(r'\[(\d{1,}).+\]').hasMatch(input);
+  static int _tagColonIndex(String l) {
+    final length = l.length;
+    if (length < 5) return -1;
+    if (l.codeUnitAt(0) != 0x5B /* [ */ || l.codeUnitAt(length - 1) != 0x5D /* ] */) return -1;
+    final c = l.codeUnitAt(1);
+    if (c < 0x61 || c > 0x7A) return -1; // a-z
+    return l.indexOf(':', 2);
+  }
+
+  static String _tagValue(String l, int tagColonIndex) => l.substring(tagColonIndex + 1, l.length - 1).trim();
+
+  static bool _hasWordTimestamp(String lyric) {
+    var open = lyric.indexOf('<');
+    while (open >= 0) {
+      final scanned = _LRCMultiTimestampParser._scanTimestamp(lyric, open + 1, 0x3E /* > */);
+      if (scanned.end >= 0) return true;
+      open = lyric.indexOf('<', open + 1);
+    }
+    return false;
+  }
+
+  /// same as `RegExp(r'^\w:')`.
+  static bool _isExtendedLine(String lyric) {
+    if (lyric.length < 2 || lyric.codeUnitAt(1) != 0x3A /* : */) return false;
+    final c = lyric.codeUnitAt(0);
+    return (c >= 0x30 && c <= 0x39) || (c >= 0x41 && c <= 0x5A) || (c >= 0x61 && c <= 0x7A) || c == 0x5F;
+  }
+
+  static int _lastIndexOnLine(String s, int codeUnit, int from) {
+    var found = -1;
+    for (var i = from; i < s.length; i++) {
+      final c = s.codeUnitAt(i);
+      if (_isLineTerminator(c)) break;
+      if (c == codeUnit) found = i;
+    }
+    return found;
+  }
+
+  /// Checks if the string [input] is a valid LRC, same as `RegExp(r'\[(\d{1,}).+\]').hasMatch(input)`.
+  static bool isValid(String input) {
+    final length = input.length;
+    var open = input.indexOf('[');
+    while (open >= 0 && open + 3 < length) {
+      final c = input.codeUnitAt(open + 1);
+      if (c < 0x30 || c > 0x39) {
+        open = input.indexOf('[', open + 1);
+        continue;
+      }
+      var i = open + 2;
+      for (; i < length; i++) {
+        final lineChar = input.codeUnitAt(i);
+        if (_isLineTerminator(lineChar)) break;
+        if (lineChar == 0x5D /* ] */ && i >= open + 3) return true;
+      }
+      // -- any other `[` before this line end would need the same missing `]`
+      open = input.indexOf('[', i);
+    }
+    return false;
+  }
 
   static String cleanPlainLyrics(String input) {
     final regex = RegExp(r'([\r\n]*\[((ti)|(a[rlu])|(by)|([rv]e)|(length)|(offset)|(la)):.+\][\r\n]*)');
@@ -405,6 +522,14 @@ class LrcParser {
     if (codeUnit >= 0x0591 && codeUnit <= 0x05F4) return true;
     return false;
   }
+
+  static bool _isRegexSpace(int c) {
+    if (c <= 0x20) return c == 0x20 || (c >= 0x09 && c <= 0x0D);
+    if (c < 0xA0) return false;
+    return c == 0xA0 || c == 0x1680 || (c >= 0x2000 && c <= 0x200A) || c == 0x2028 || c == 0x2029 || c == 0x202F || c == 0x205F || c == 0x3000 || c == 0xFEFF;
+  }
+
+  static bool _isLineTerminator(int c) => c == 0x0A || c == 0x0D || c == 0x2028 || c == 0x2029;
 
   // by claude
   static bool _isEmptyCodeUnit(int codeUnit) {

@@ -1,71 +1,87 @@
 part of lrc;
 
+// optimizations by claude
 /// Parses Multi-timestamped lyrics lines effectively.
 class _LRCMultiTimestampParser {
   const _LRCMultiTimestampParser();
 
-  /// supports 2-digit minutes, 2-digit seconds & optional 1-2-3-digit hundreds.
-  static final _durRegex = RegExp(r'\[([0-9]{1,}):(\d{1,})(\.[0-9]{1,})?\]\s*(.*)?');
+  static const _ScannedTimestamp _kNoTimestamp = (end: -1, micros: 0);
 
   static Duration? extractMainTimestamp(String line) {
-    final m = _durRegex.firstMatch(line);
-    if (m == null) return null;
-    return _durationFromStrings(
-      minutes: m.group(1),
-      seconds: m.group(2),
-      hundreds: m.group(3)?.substring(1),
-    );
+    final (:end, :micros) = _findLineTimestamp(line, 0);
+    if (end < 0) return null;
+    return Duration(microseconds: micros);
   }
 
   /// Converts multi-timestamped lyrics lines into a pair of `lineText` & `timestamps` list
-  static _MultiTimeStampDetails parseLine(String line) {
-    var lineText = line;
-    final timestamps = <Duration>[];
-
+  static _MultiTimeStampDetails? parseLine(String line) {
+    List<Duration>? timestamps;
+    var textStart = 0;
     while (true) {
-      final m = _durRegex.firstMatch(lineText);
-      if (m != null && m.group(1) != null) {
-        final timestamp = _durationFromStrings(
-          minutes: m.group(1),
-          seconds: m.group(2),
-          hundreds: m.group(3)?.substring(1),
-        );
-        timestamps.add(timestamp);
-        lineText = m.group(4) ?? '';
-        if (lineText.isEmpty) break;
-      } else {
-        break;
-      }
+      final (:end, :micros) = _findLineTimestamp(line, textStart);
+      if (end < 0) break;
+      (timestamps ??= <Duration>[]).add(Duration(microseconds: micros));
+      textStart = end;
     }
+    if (timestamps == null) return null;
 
     return _MultiTimeStampDetails.trimmed(
-      lineText: lineText,
+      lineText: line.substring(textStart),
       timestamps: timestamps,
     );
   }
 
-  static Duration _durationFromStrings({
-    required String? minutes,
-    required String? seconds,
-    required String? hundreds,
-  }) {
-    final m = minutes == null ? null : int.tryParse(minutes);
-    final s = seconds == null ? null : int.tryParse(seconds);
-    var micros = 0;
-    if (hundreds != null) {
-      final length = hundreds.length;
-      if (length >= 6) {
-        micros = int.tryParse(hundreds.substring(0, 6)) ?? 0;
-      } else {
-        micros = (int.tryParse(hundreds) ?? 0) * _microsScale[length];
-      }
+  static _ScannedTimestamp _findLineTimestamp(String line, int from) {
+    var open = line.indexOf('[', from);
+    while (open >= 0) {
+      final scanned = _scanTimestamp(line, open + 1, 0x5D /* ] */);
+      if (scanned.end >= 0) return scanned;
+      open = line.indexOf('[', open + 1);
     }
+    return _kNoTimestamp;
+  }
 
-    return Duration(
-      minutes: m ?? 0,
-      seconds: s ?? 0,
-      microseconds: micros,
-    );
+  /// `mm:ss` or `mm:ss.fraction` starting at [start], closed by [closeCodeUnit].
+  static _ScannedTimestamp _scanTimestamp(String s, int start, int closeCodeUnit) {
+    final length = s.length;
+    var i = start;
+    var minutes = 0;
+    while (i < length) {
+      final digit = s.codeUnitAt(i) - 0x30;
+      if (digit < 0 || digit > 9) break;
+      minutes = minutes * 10 + digit;
+      i++;
+    }
+    if (i == start || i >= length || s.codeUnitAt(i) != 0x3A /* : */) return _kNoTimestamp;
+
+    final secondsStart = ++i;
+    var seconds = 0;
+    while (i < length) {
+      final digit = s.codeUnitAt(i) - 0x30;
+      if (digit < 0 || digit > 9) break;
+      seconds = seconds * 10 + digit;
+      i++;
+    }
+    if (i == secondsStart || i >= length) return _kNoTimestamp;
+
+    var fractionMicros = 0;
+    if (s.codeUnitAt(i) == 0x2E /* . */) {
+      final fractionStart = ++i;
+      var fraction = 0;
+      while (i < length) {
+        final digit = s.codeUnitAt(i) - 0x30;
+        if (digit < 0 || digit > 9) break;
+        if (i - fractionStart < 6) fraction = fraction * 10 + digit;
+        i++;
+      }
+      final fractionLength = i - fractionStart;
+      if (fractionLength == 0 || i >= length) return _kNoTimestamp;
+      fractionMicros = fractionLength >= 6 ? fraction : fraction * _microsScale[fractionLength];
+    }
+    if (s.codeUnitAt(i) != closeCodeUnit) return _kNoTimestamp;
+
+    final micros = minutes * Duration.microsecondsPerMinute + seconds * Duration.microsecondsPerSecond + fractionMicros;
+    return (end: i + 1, micros: micros);
   }
 
   static const _microsScale = [1000000, 100000, 10000, 1000, 100, 10];
@@ -80,3 +96,5 @@ class _MultiTimeStampDetails {
     required this.timestamps,
   }) : lineText = lineText.trim();
 }
+
+typedef _ScannedTimestamp = ({int end, int micros});
