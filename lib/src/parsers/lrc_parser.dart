@@ -58,11 +58,25 @@ class LrcParser {
     return buffer.toString();
   }
 
+  static const _kTrailingPartFallbackDuration = Duration(seconds: 1);
+
   static Iterable<LrcLinePart> extractTimeStampPartFromLine(String line,
-      {Duration? startTimeStamp}) sync* {
+          {Duration? startTimeStamp}) =>
+      _extractParts(line, startTimeStamp, null, 0);
+
+  static Iterable<LrcLinePart> _extractParts(
+    String line,
+    Duration? startTimeStamp,
+    List<String>? followingLines,
+    int followingLinesStart,
+  ) sync* {
     var isFirst = true;
     var latestTimeStamp = startTimeStamp;
+    var trailingIndex = 0;
+    Duration? firstPartStart;
+    var partsCount = 0;
     for (var j in _partRegex.allMatches(line)) {
+      trailingIndex = j.end;
       final lyrics = _collapseSpaces(j.group(1) ?? '');
       final endTimestamp = _LRCMultiTimestampParser._durationFromStrings(
         minutes: j.group(3),
@@ -93,8 +107,59 @@ class LrcParser {
         endTimestamp: endTimestamp,
         lyrics: lyrics,
       );
+      firstPartStart ??= startTimestamp;
+      partsCount++;
       isFirst = false;
     }
+
+    if (trailingIndex == 0 || trailingIndex == line.length) return;
+    if (latestTimeStamp == null) return;
+    final trailingLyrics = _collapseSpaces(line.substring(trailingIndex));
+    if (trailingLyrics.trim().isEmpty) return;
+    final trailingStart = latestTimeStamp;
+    var trailingEnd = followingLines == null
+        ? null
+        : _nextLineTimestampAfter(
+            followingLines, followingLinesStart, trailingStart);
+    if (trailingEnd == null) {
+      final averageDuration = firstPartStart == null
+          ? _kTrailingPartFallbackDuration
+          : (trailingStart - firstPartStart) ~/ partsCount;
+      trailingEnd = trailingStart + averageDuration;
+    }
+    yield LrcLinePart(
+      startTimestamp: trailingStart,
+      endTimestamp: trailingEnd,
+      lyrics: trailingLyrics,
+    );
+  }
+
+  // -- skips translations and overlapping duet lines that don't pass [minimum]
+  static Duration? _nextLineTimestampAfter(
+    List<String> lines,
+    int fromIndex,
+    Duration minimum,
+  ) {
+    for (var i = fromIndex; i < lines.length; i++) {
+      final timestamp = _LRCMultiTimestampParser.extractMainTimestamp(lines[i]);
+      if (timestamp != null && timestamp > minimum) return timestamp;
+    }
+    return null;
+  }
+
+  static List<LrcLinePart> _shiftParts(
+    List<LrcLinePart> parts,
+    Duration shift,
+  ) {
+    if (shift == Duration.zero) return parts;
+    return [
+      for (final part in parts)
+        LrcLinePart(
+          startTimestamp: part.startTimestamp + shift,
+          endTimestamp: part.endTimestamp + shift,
+          lyrics: part.lyrics,
+        ),
+    ];
   }
 
   /// Parses an LRC from a string. Throws a `FormatExeption`
@@ -193,21 +258,8 @@ class LrcParser {
             lyric = lyric.substring(indexOfLT); // ensure
           }
 
-          if (!lyric.endsWith('>')) {
-            for (var next = lineIndex + 1; next < lines.length; next++) {
-              final nextTimestamp =
-                  _LRCMultiTimestampParser.extractMainTimestamp(lines[next]);
-              if (nextTimestamp != null) {
-                lyric = '$lyric<$nextTimestamp>';
-                break;
-              }
-            }
-          }
           parts.addAll(
-            extractTimeStampPartFromLine(
-              lyric,
-              startTimeStamp: timestamps.first,
-            ),
+            _extractParts(lyric, timestamps.first, lines, lineIndex + 1),
           );
         } else if (lyric.contains(RegExp(r'^\w:'))) {
           //if extended
@@ -258,13 +310,16 @@ class LrcParser {
             registeredTimestamps.add(linetimestamp);
             final readableText =
                 readableTextPre.isNotEmpty ? readableTextPre : lyric;
+            final partsShift = linetimestamp - timestamps.first;
+            final lineParts =
+                parts == null ? null : _shiftParts(parts, partsShift);
             lyrics.add(LrcLine(
               timestamp: linetimestamp,
               originalIndex: lyrics.length,
               lyrics: lyric,
               readableText: readableText,
               type: lineType,
-              parts: parts,
+              parts: lineParts,
               person: person,
               isRTL: LrcParser.isLrcLineRTL(readableText),
             ));

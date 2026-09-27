@@ -242,4 +242,51 @@ Somewhere in these eyes, I'm on your side
     expect(parsed.lyrics[2].person, 2);
     expect(parsed.personCount, 2);
   });
+
+  test('word synced last word ends at next later line', () {
+    const content = '''[00:42.11]<00:42.11>Aaj <00:46.69>ho <00:47.29>gayi
+[00:42.11]From today
+[00:44.00]v2:<00:44.00>duet <00:45.00>line <00:46.00>
+[00:48.19]<00:48.19>Aaj <00:52.00>ho <00:52.45>gaya''';
+
+    final parsed = Lrc.parse(content);
+    final first = parsed.lyrics[0].parts!.last;
+    expect(first.lyrics, 'gayi');
+    expect(first.startTimestamp, const Duration(milliseconds: 47290));
+    expect(first.endTimestamp, const Duration(milliseconds: 48190));
+
+    final last = parsed.lyrics.last;
+    expect(last.readableText, 'Aaj ho gaya');
+    expect(last.parts!.last.lyrics, 'gaya');
+    expect(last.parts!.last.endTimestamp - last.parts!.last.startTimestamp,
+        const Duration(milliseconds: 2130));
+  });
+
+  test('word synced multi timestamp line parts follow each timestamp', () {
+    const content = '[00:10.00][01:20.00]<00:10.00>la <00:11.00>la<00:12.00>';
+
+    final parsed = Lrc.parse(content);
+    expect(parsed.lyrics[0].parts!.first.startTimestamp,
+        const Duration(seconds: 10));
+    expect(parsed.lyrics[1].parts!.first.startTimestamp,
+        const Duration(seconds: 80));
+    expect(
+        parsed.lyrics[1].parts!.last.endTimestamp, const Duration(seconds: 82));
+  });
+
+  test('word synced parts follow ui offset', () {
+    const content = '''[offset:500]
+[00:10.00]<00:10.00>la <00:11.00>la<00:12.00>
+[00:20.00]<00:20.00>next<00:21.00>''';
+
+    final ui = Lrc.parse(content)
+        .forUiDisplay(0, extraOffsetDuration: const Duration(seconds: 1))
+        .uiLyricsLines;
+    expect(ui[0].timestamp, const Duration(milliseconds: 10500));
+    expect(
+        ui[0].parts!.first.startTimestamp, const Duration(milliseconds: 10500));
+    expect(ui[0].parts!.last.endTimestamp, const Duration(milliseconds: 12500));
+    expect(ui[1].timestamp, const Duration(milliseconds: 12500));
+    expect(ui[2].timestamp, const Duration(milliseconds: 20500));
+  });
 }

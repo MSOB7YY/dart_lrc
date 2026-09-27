@@ -8,18 +8,14 @@ class _LRCMultiTimestampParser {
   static final _durRegex =
       RegExp(r'\[([0-9]{1,}):(\d{1,})(\.[0-9]{1,})?\]\s*(.*)?');
 
-  static String? extractMainTimestamp(String line) {
+  static Duration? extractMainTimestamp(String line) {
     final m = _durRegex.firstMatch(line);
     if (m == null) return null;
-    try {
-      final minutes = m.group(1);
-      if (minutes != null) {
-        final seconds = m.group(2) ?? '00';
-        final hundreds = m.group(3) ?? '.00';
-        return '$minutes:$seconds$hundreds';
-      }
-    } catch (_) {}
-    return null;
+    return _durationFromStrings(
+      minutes: m.group(1),
+      seconds: m.group(2),
+      hundreds: m.group(3)?.substring(1),
+    );
   }
 
   /// Converts multi-timestamped lyrics lines into a pair of `lineText` & `timestamps` list

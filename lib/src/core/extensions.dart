@@ -40,6 +40,16 @@ extension LrcExtensions on Lrc {
     final offsetDuration =
         Duration(milliseconds: this.offset ?? 0) - extraOffsetDuration;
     final offsetValid = offsetDuration != Duration.zero;
+    final multiplierValid = multiplier != 0 && multiplier != 1;
+    Duration toUiTimestamp(Duration timestamp) {
+      var uiTimestamp = timestamp;
+      if (offsetValid) uiTimestamp -= offsetDuration;
+      if (multiplierValid) uiTimestamp *= multiplier;
+      return uiTimestamp;
+    }
+
+    final partsToUiTimestamp =
+        offsetValid || multiplierValid ? toUiTimestamp : null;
     final uiLyricsLines = <LrcLine>[];
     final highlightTimestampsMap =
         <Duration, List<int>>{}; // timestamp: [index]
@@ -47,13 +57,11 @@ extension LrcExtensions on Lrc {
     for (var index = 0; index < originalLyrics.length; index++) {
       final ogItem = originalLyrics[index];
 
-      var lineTimeStampEdited = ogItem.timestamp;
-      if (offsetValid) lineTimeStampEdited -= offsetDuration;
-      if (multiplier != 0) lineTimeStampEdited *= multiplier;
+      final lineTimeStampEdited = toUiTimestamp(ogItem.timestamp);
 
       final newLrcLine = ogItem.withTimeStamp(
         newTimestamp: lineTimeStampEdited,
-        parts: _mergeParts(ogItem.parts),
+        parts: _mergeParts(ogItem.parts, partsToUiTimestamp),
       );
       final indicesList = highlightTimestampsMap[lineTimeStampEdited] ??= [];
       indicesList.add(index + indexExtra);
@@ -75,7 +83,8 @@ extension LrcExtensions on Lrc {
               : originalLyrics[index + 1];
           if (nextLine != null) {
             final partEndTimestamp = newParts.last.endTimestamp;
-            if ((nextLine.timestamp - partEndTimestamp) >
+            final nextLineTimestamp = toUiTimestamp(nextLine.timestamp);
+            if ((nextLineTimestamp - partEndTimestamp) >
                 durationDifferenceToInsertEmptyLine) {
               // -- insert empty line to allow dynamic lrc view to hide lrc during long transitions
               indexExtra++;
@@ -109,7 +118,8 @@ extension LrcExtensions on Lrc {
 }
 
 List<LrcLinePart>? _mergeParts(
-  List<LrcLinePart>? parts, {
+  List<LrcLinePart>? parts,
+  Duration Function(Duration timestamp)? toUiTimestamp, {
   int minDurationMs = 250,
 }) {
   if (parts == null || parts.isEmpty) return parts;
@@ -129,12 +139,24 @@ List<LrcLinePart>? _mergeParts(
         lyrics: current.lyrics + next.lyrics,
       );
     } else {
-      merged.add(current);
+      merged.add(_partToUi(current, toUiTimestamp));
       current = next;
     }
   }
-  merged.add(current);
+  merged.add(_partToUi(current, toUiTimestamp));
   return merged;
+}
+
+LrcLinePart _partToUi(
+  LrcLinePart part,
+  Duration Function(Duration timestamp)? toUiTimestamp,
+) {
+  if (toUiTimestamp == null) return part;
+  return LrcLinePart(
+    startTimestamp: toUiTimestamp(part.startTimestamp),
+    endTimestamp: toUiTimestamp(part.endTimestamp),
+    lyrics: part.lyrics,
+  );
 }
 
 LrcLine? _romanized(
