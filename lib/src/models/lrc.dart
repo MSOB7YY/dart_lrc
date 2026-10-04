@@ -106,7 +106,7 @@ class Lrc {
 
     final lrcLength = lyrics.length;
     for (var i = 0; i < lrcLength; i++) {
-      buffer.writeln(lyrics[i].formattedLine);
+      buffer.writeln(lyrics[i].format());
     }
 
     return buffer.toString();

@@ -85,6 +85,9 @@ class LrcParser {
 
   static const _kTrailingPartFallbackDuration = Duration(seconds: 1);
 
+  /// `mm:ss` or `mm:ss.xx`, null when invalid.
+  static Duration? parseTimestamp(String text) => _LRCMultiTimestampParser.extractMainTimestamp('[${text.trim()}]');
+
   static Iterable<LrcLinePart> extractTimeStampPartFromLine(String line, {Duration? startTimeStamp}) => _extractParts(line, startTimeStamp, null, 0);
 
   static Iterable<LrcLinePart> _extractParts(

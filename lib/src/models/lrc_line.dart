@@ -50,18 +50,39 @@ class LrcLine {
     );
   }
 
-  ///get the string for a formatted line
-  String get formattedLine {
-    ///function to add leading zeros
-    String f(int x) => x.toString().padLeft(2, '0');
-
-    // LRC format doesn't accept hours.
-    final minutes = timestamp.inMinutes % 60;
-    final seconds = timestamp.inSeconds % 60;
-    final hundreds = timestamp.inMilliseconds % 1000 ~/ 10;
-
-    return '[${f(minutes)}:${f(seconds)}.${f(hundreds)}]$lyrics';
+  /// the line as written in an lrc file, word timestamps are written from [parts].
+  String format() {
+    final person = this.person;
+    final text = _formatText();
+    if (person == 0) return '[bg:$text]';
+    final hasPersonPrefix = person != null && type != LrcTypes.extended;
+    final personPrefix = hasPersonPrefix ? 'v$person: ' : '';
+    final timestampText = formatTimestamp(timestamp);
+    return '[$timestampText]$personPrefix$text';
   }
+
+  String _formatText() {
+    final parts = this.parts;
+    if (type != LrcTypes.enhanced || parts == null || parts.isEmpty) return lyrics;
+    final buffer = StringBuffer();
+    for (final part in parts) {
+      buffer.write('<${formatTimestamp(part.startTimestamp)}>');
+      buffer.write(part.lyrics);
+    }
+    buffer.write('<${formatTimestamp(parts.last.endTimestamp)}>');
+    return buffer.toString();
+  }
+
+  /// `mm:ss.xx`, minutes keep going past 59 since lrc has no hours.
+  static String formatTimestamp(Duration timestamp) {
+    if (timestamp.isNegative) timestamp = Duration.zero;
+    final minutes = timestamp.inMinutes;
+    final seconds = timestamp.inSeconds % 60;
+    final centiseconds = timestamp.inMilliseconds % 1000 ~/ 10;
+    return '${_pad2(minutes)}:${_pad2(seconds)}.${_pad2(centiseconds)}';
+  }
+
+  static String _pad2(int n) => n.toString().padLeft(2, '0');
 
   @override
   String toString() {

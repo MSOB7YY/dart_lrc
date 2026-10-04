@@ -289,4 +289,48 @@ Somewhere in these eyes, I'm on your side
     expect(ui[1].timestamp, const Duration(milliseconds: 12500));
     expect(ui[2].timestamp, const Duration(milliseconds: 20500));
   });
+  test('format keeps word parts, singers, background lines and long timestamps',
+      () {
+    const content = '''[ar:Someone]
+[offset:120]
+[00:10.00]v1: <00:10.00>Hello <00:10.50>there<00:11.00><00:11.20>friend<00:12.00>
+[bg:<00:10.40>ooh<00:11.00>]
+[00:13.00]v2: plain duet line
+[00:13.00]translated line
+[61:02.50]past an hour''';
+
+    final parsed = Lrc.parse(content);
+    final formatted = parsed.format();
+    final reparsed = Lrc.parse(formatted);
+
+    expect(reparsed.artist, 'Someone');
+    expect(reparsed.offset, 120);
+    expect(reparsed.lyrics.length, parsed.lyrics.length);
+    for (var i = 0; i < parsed.lyrics.length; i++) {
+      final a = parsed.lyrics[i];
+      final b = reparsed.lyrics[i];
+      expect(b.timestamp, a.timestamp);
+      expect(b.readableText, a.readableText);
+      expect(b.person, a.person);
+      expect(b.parts?.length, a.parts?.length);
+      final partsA = a.parts ?? const <LrcLinePart>[];
+      final partsB = b.parts ?? const <LrcLinePart>[];
+      for (var j = 0; j < partsA.length; j++) {
+        expect(partsB[j].lyrics, partsA[j].lyrics);
+        expect(partsB[j].startTimestamp, partsA[j].startTimestamp);
+        expect(partsB[j].endTimestamp, partsA[j].endTimestamp);
+      }
+    }
+    expect(reparsed.lyrics.last.timestamp,
+        const Duration(minutes: 61, seconds: 2, milliseconds: 500));
+    expect(formatted, contains('[bg:<00:10.40>ooh<00:11.00>]'));
+  });
+
+  test('timestamp parsing', () {
+    expect(LrcParser.parseTimestamp('01:02.34'),
+        const Duration(minutes: 1, seconds: 2, milliseconds: 340));
+    expect(LrcParser.parseTimestamp(' 75:00 '), const Duration(minutes: 75));
+    expect(LrcParser.parseTimestamp('1:2:3'), null);
+    expect(LrcParser.parseTimestamp('abc'), null);
+  });
 }
