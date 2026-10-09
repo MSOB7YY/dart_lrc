@@ -3,6 +3,7 @@
 - `LrcLineResolver` finds the line at a position, `forUiDisplay` takes it through `lineResolver`
 - Lines with unique out of order timestamps are sorted
 - `PaxsenixJsonParser` reads the word synced json of the Lyrically (paxsenix) api
+- `QrcParser` reads the word synced QRC lyrics of QQ Music
 - Interlude empty lines are no longer skipped after a translated line, and background vocals no longer hide their main line
 - Extended lines (`M: ...`) no longer get an interlude empty line sharing their timestamp
 

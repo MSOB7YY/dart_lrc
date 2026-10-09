@@ -19,5 +19,6 @@ Lrc Function(String content)? _parserFor(String path) {
   if (path.endsWith('.xml') || path.endsWith('.ttml')) return TtmlParser.parse;
   if (path.endsWith('.srt') || path.endsWith('.vtt') || path.endsWith('.sbv') || path.endsWith('.ass')) return SubtitleParser.parse;
   if (path.endsWith('.json')) return (content) => PaxsenixJsonParser.parse(content)!;
+  if (path.endsWith('.qrc')) return (content) => QrcParser.parse(content)!;
   return null;
 }
