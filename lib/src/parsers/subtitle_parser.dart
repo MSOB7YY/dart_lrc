@@ -40,16 +40,7 @@ class SubtitleParser {
 
   /// Detects the subtitle format of [content], or null if unknown.
   static SubtitleFormat? detectFormat(String content) {
-    var start = 0;
-    final length = content.length;
-    while (start < length) {
-      final c = content.codeUnitAt(start);
-      if (c == 0xFEFF /* BOM */ || LrcParser._isEmptyCodeUnit(c)) {
-        start++;
-      } else {
-        break;
-      }
-    }
+    final start = LrcParser._contentStart(content);
     if (content.startsWith('WEBVTT', start)) return SubtitleFormat.vtt;
     if (content.contains('Dialogue:') && (content.contains('[Events]') || content.contains('[Script Info]'))) {
       return SubtitleFormat.ssa;
@@ -352,11 +343,7 @@ class SubtitleParser {
     }
 
     // -- ssa/ass dialogues are not guaranteed to be in order
-    lines.sort((a, b) {
-      final res = a.timestamp.inMicroseconds.compareTo(b.timestamp.inMicroseconds);
-      if (res == 0) return a.originalIndex.compareTo(b.originalIndex);
-      return res;
-    });
+    lines.sort(LrcParser._compareLines);
 
     var personCount = personToIndex.length;
     if (personCount <= 0) personCount = 1;

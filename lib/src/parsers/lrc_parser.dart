@@ -208,7 +208,7 @@ class LrcParser {
     var lyrics = <LrcLine>[];
 
     final personToIndex = <String, int>{};
-    var registeredTimestamps = <Duration>{};
+    var latestTimestamp = Duration.zero;
     var shouldSortLyrics = false;
 
     // loop thru each lines
@@ -248,20 +248,6 @@ class LrcParser {
 
         var lyric = lrclineDetails.lineText;
         final timestamps = lrclineDetails.timestamps;
-
-        if (shouldSortLyrics == false) {
-          if (timestamps.length > 1) {
-            // -- means it has multi timestamps
-            shouldSortLyrics = true;
-          }
-          for (final timestamp in timestamps) {
-            if (registeredTimestamps.contains(timestamp)) {
-              // -- means it has multi language in the end of the file
-              shouldSortLyrics = true;
-              break;
-            }
-          }
-        }
 
         int? person;
 
@@ -331,7 +317,8 @@ class LrcParser {
         for (var lyric in lyricSplit) {
           final readableTextPre = parts != null && parts.isNotEmpty ? parts.map((e) => e.lyrics).join() : lyric;
           for (final linetimestamp in timestamps) {
-            registeredTimestamps.add(linetimestamp);
+            if (linetimestamp < latestTimestamp) shouldSortLyrics = true;
+            latestTimestamp = linetimestamp;
             final readableText = readableTextPre.isNotEmpty ? readableTextPre : lyric;
             final partsShift = linetimestamp - timestamps.first;
             final lineParts = parts == null ? null : _shiftParts(parts, partsShift);
@@ -363,8 +350,9 @@ class LrcParser {
         final parts = extractTimeStampPartFromLine(text).toList();
         if (parts.isEmpty) continue;
         final readableText = parts.map((e) => e.lyrics).join();
+        final timestamp = parts[0].startTimestamp;
         lyrics.add(LrcLine(
-          timestamp: parts[0].startTimestamp,
+          timestamp: timestamp,
           originalIndex: lyrics.length,
           lyrics: text,
           readableText: readableText,
@@ -373,19 +361,12 @@ class LrcParser {
           person: 0,
           isRTL: LrcParser.isLrcLineRTL(readableText),
         ));
-        shouldSortLyrics = true;
+        if (timestamp < latestTimestamp) shouldSortLyrics = true;
+        latestTimestamp = timestamp;
       }
     }
 
-    if (shouldSortLyrics) {
-      lyrics.sort((a, b) {
-        final res = a.timestamp.inMicroseconds.compareTo(b.timestamp.inMicroseconds);
-        if (res == 0) {
-          return a.originalIndex.compareTo(b.originalIndex);
-        }
-        return res;
-      });
-    }
+    if (shouldSortLyrics) lyrics.sort(_compareLines);
 
     var personCount = personToIndex.values.where((element) => element > 0).length;
     if (personCount <= 0) personCount = 1;
@@ -405,6 +386,23 @@ class LrcParser {
       language: language,
       personCount: personCount,
     );
+  }
+
+  static int _compareLines(LrcLine a, LrcLine b) {
+    final res = a.timestamp.inMicroseconds.compareTo(b.timestamp.inMicroseconds);
+    if (res == 0) return a.originalIndex.compareTo(b.originalIndex);
+    return res;
+  }
+
+  static int _contentStart(String content) {
+    final length = content.length;
+    var start = 0;
+    while (start < length) {
+      final c = content.codeUnitAt(start);
+      if (c != 0xFEFF /* BOM */ && !_isEmptyCodeUnit(c)) break;
+      start++;
+    }
+    return start;
   }
 
   /// Finds a `v<digits>:` person prefix at the start of [lyric],

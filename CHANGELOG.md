@@ -1,3 +1,11 @@
+## 2.2.0
+
+- `LrcLineResolver` finds the line at a position, `forUiDisplay` takes it through `lineResolver`
+- Lines with unique out of order timestamps are sorted
+- `PaxsenixJsonParser` reads the word synced json of the Lyrically (paxsenix) api
+- Interlude empty lines are no longer skipped after a translated line, and background vocals no longer hide their main line
+- Extended lines (`M: ...`) no longer get an interlude empty line sharing their timestamp
+
 ## 2.1.0
 
 - Parsing is ~6x faster for word synced lyrics and ~10x faster for plain synced lyrics, regexes were replaced with hand written scanners producing identical output
