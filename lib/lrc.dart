@@ -17,6 +17,7 @@ part 'src/models/lrc_line.dart';
 part 'src/models/lrc_line_part.dart';
 part 'src/models/lrc_stream.dart';
 part 'src/parsers/lrc_parser.dart';
+part 'src/parsers/lyrics_parser.dart';
 part 'src/parsers/multi_timestamp_parser.dart';
 part 'src/parsers/paxsenix_json_parser.dart';
 part 'src/parsers/qrc_parser.dart';

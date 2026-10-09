@@ -1,9 +1,17 @@
+## 2.3.1
+
+- `LyricsParser` parses any supported format, guessing it from the content so only its parser runs, plain text is rejected in a single pass (~50x faster than trying every parser)
+- `SubtitleParser.isValid` no longer compiles a regex per call
+
+## 2.3.0
+
+- `QrcParser` reads the word synced QRC lyrics of QQ Music
+
 ## 2.2.0
 
 - `LrcLineResolver` finds the line at a position, `forUiDisplay` takes it through `lineResolver`
 - Lines with unique out of order timestamps are sorted
 - `PaxsenixJsonParser` reads the word synced json of the Lyrically (paxsenix) api
-- `QrcParser` reads the word synced QRC lyrics of QQ Music
 - Interlude empty lines are no longer skipped after a translated line, and background vocals no longer hide their main line
 - Extended lines (`M: ...`) no longer get an interlude empty line sharing their timestamp
 
@@ -15,11 +23,11 @@
 - Word parts of lines with multiple timestamps (`[00:10.00][01:20.00]...`) are now shifted to each timestamp
 - `Lrc.forUiDisplay` now applies offset, `extraOffsetDuration` and the multiplier to word parts too, not only to line timestamps
 
-| file (AOT, µs per `Lrc.parse`) | 2.0.2 | 2.1.0 | speedup |
-| --- | --- | --- | --- |
-| word synced, 154 lines, duets | 1850 | 314 | 5.9x |
-| word synced, 117 lines, no end timestamps | 1356 | 228 | 5.9x |
-| plain synced, 117 lines | 1253 | 123 | 10.2x |
+| file (AOT, µs per `Lrc.parse`)            | 2.0.2 | 2.1.0 | speedup |
+| ----------------------------------------- | ----- | ----- | ------- |
+| word synced, 154 lines, duets             | 1850  | 314   | 5.9x    |
+| word synced, 117 lines, no end timestamps | 1356  | 228   | 5.9x    |
+| plain synced, 117 lines                   | 1253  | 123   | 10.2x   |
 
 ## 2.0.2
 

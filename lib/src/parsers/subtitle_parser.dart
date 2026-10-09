@@ -34,6 +34,7 @@ class SubtitleParser {
   static final _vttInlineTimestampRegex = RegExp(r'<((?:\d{1,2}:)?\d{1,2}:\d{2}\.\d{1,3})>');
   static final _vttVoiceRegex = RegExp(r'<v(?:\.[^\s>]*)?\s+([^>]+)>');
   static final _sbvTimingRegex = RegExp(r'^\s*(\d{1,2}:\d{2}:\d{2}\.\d{1,3})\s*,\s*(\d{1,2}:\d{2}:\d{2}\.\d{1,3})\s*$');
+  static final _sbvTimingMultiLineRegex = RegExp(_sbvTimingRegex.pattern, multiLine: true);
   static final _assKaraokeRegex = RegExp(r'\\[kK][fo]?(\d+)');
 
   static bool isValid(String content) => detectFormat(content) != null;
@@ -46,7 +47,7 @@ class SubtitleParser {
       return SubtitleFormat.ssa;
     }
     if (_srtTimingRegex.hasMatch(content)) return SubtitleFormat.srt;
-    if (RegExp(_sbvTimingRegex.pattern, multiLine: true).hasMatch(content)) {
+    if (_sbvTimingMultiLineRegex.hasMatch(content)) {
       return SubtitleFormat.sbv;
     }
     return null;
