@@ -25,7 +25,7 @@ extension LrcExtensions on Lrc {
     double multiplier, {
     Duration durationDifferenceToInsertEmptyLine = const Duration(seconds: 1),
     Duration extraOffsetDuration = Duration.zero,
-    String Function(String text)? romanizer,
+    String Function(int index, String text)? romanizer,
   }) {
     final originalLyrics = lyrics;
     final length = originalLyrics.length;
@@ -176,12 +176,11 @@ LrcLine? _romanized(
   LrcLine line,
   int index,
   Duration lineTimestamp,
-  String Function(String text) romanizer,
+  String Function(int index, String text) romanizer,
 ) {
-  final parts = line.parts;
-  final txt = parts != null && parts.isNotEmpty ? parts.map((e) => e.lyrics).join() : line.lyrics;
+  final txt = line.readableText;
   if (txt.isEmpty) return null;
-  final romanized = romanizer(txt);
+  final romanized = romanizer(index, txt);
   if (romanized == txt) return null;
   return LrcLine(
     timestamp: lineTimestamp,

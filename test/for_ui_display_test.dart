@@ -87,7 +87,7 @@ void main() {
 
   test('romanized copies sit right after their line and shift the later indices', () {
     const content = '[00:01.00]<00:01.00>a <00:02.00>b<00:03.00>\n[00:10.00]c';
-    final ui = Lrc.parse(content).forUiDisplay(0, romanizer: (text) => text.toUpperCase());
+    final ui = Lrc.parse(content).forUiDisplay(0, romanizer: (index, text) => text.toUpperCase());
     expect(ui.uiLyricsLines.map((e) => e.readableText), ['a b', 'A B', '', 'c', 'C']);
     expect(ui.highlightTimestampsMap.values, [
       [0, 1],
@@ -127,7 +127,7 @@ void main() {
   test('every fixture keeps the index map and the lines in time order', () {
     for (final (:name, :lrc) in parseAllFixtures()) {
       final shifted = Lrc(type: lrc.type, lyrics: lrc.lyrics, offset: 500, personCount: lrc.personCount);
-      final ui = shifted.forUiDisplay(0.8, extraOffsetDuration: const Duration(milliseconds: 700), romanizer: (text) => text.toUpperCase());
+      final ui = shifted.forUiDisplay(0.8, extraOffsetDuration: const Duration(milliseconds: 700), romanizer: (index, text) => text.toUpperCase());
       final lines = ui.uiLyricsLines;
       final map = ui.highlightTimestampsMap;
 

@@ -60,7 +60,7 @@ void main() {
 
   test('on every fixture it picks the line a backward scan for the last started line finds', () {
     for (final (:name, :lrc) in parseAllFixtures()) {
-      final ui = lrc.forUiDisplay(0.8, extraOffsetDuration: const Duration(milliseconds: 300), romanizer: (text) => text.toUpperCase());
+      final ui = lrc.forUiDisplay(0.8, extraOffsetDuration: const Duration(milliseconds: 300), romanizer: (index, text) => text.toUpperCase());
       final lines = ui.uiLyricsLines;
       final map = ui.highlightTimestampsMap;
       int scan(int positionMS) {
