@@ -147,9 +147,9 @@ Somewhere in these eyes, I'm on your side
     final file = File(r'test\files\ttml_lrc3.ttml');
     final parsed = TtmlParser.parse(file.readLrcStringSync());
 
-    expect(parsed.lyrics.length, 111);
+    expect(parsed.lyrics.length, 120);
     expect(parsed.lyrics[1].parts?.length, 4);
-    expect(parsed.lyrics[1].readableText, 'See dha see dha ');
+    expect(parsed.lyrics[1].readableText, 'Seedha seedha');
   });
   test('ttml lyrics4', () async {
     final file = File(r'test\files\ttml_lrc4.ttml');
@@ -158,14 +158,14 @@ Somewhere in these eyes, I'm on your side
     expect(parsed.lyrics.length, 52);
     expect(parsed.lyrics[1].parts?.length, 8);
     expect(
-        parsed.lyrics[1].readableText, 'Tryna find the one that can fix me ');
+        parsed.lyrics[1].readableText, 'Tryna find the one that can fix me');
   });
   test('ttml lyrics5', () async {
     final file = File(r'test\files\ttml_lrc5.ttml');
     final parsed = TtmlParser.parse(file.readLrcStringSync());
 
     expect(parsed.lyrics.length, 112);
-    expect(parsed.lyrics[2].parts?.length, 0);
+    expect(parsed.lyrics[2].parts, null);
     expect(parsed.lyrics[2].readableText, 'Sun is down, freezing cold');
   });
 

@@ -24,8 +24,6 @@ enum SubtitleFormat {
 /// Speaker names (WebVTT `<v Name>` tags & SSA/ASS `Name` field) are
 /// mapped to [LrcLine.person].
 class SubtitleParser {
-  static final _htmlUnescape = HtmlUnescape();
-
   static final _tagRegex = RegExp(r'</?[a-zA-Z][^>]*>');
   static final _braceTagRegex = RegExp(r'\{[^{}]*\}');
 
@@ -358,7 +356,7 @@ class SubtitleParser {
     );
   }
 
-  static int _timestampToMs(String raw) => _TtmlLineExtractorXml._timestampToMilliseconds(raw.replaceAll(',', '.'));
+  static int _timestampToMs(String raw) => TtmlParser._parseTimeMS(raw, 0, raw.length, TtmlParser._kDefaultFrameRate, 1);
 
   static String _msToInlineTimestamp(int ms) {
     final minutes = ms ~/ 60000;
@@ -371,7 +369,7 @@ class SubtitleParser {
 
   static String _cleanMarkup(String text, {bool trim = true}) {
     var t = text.replaceAll(_tagRegex, '').replaceAll(_braceTagRegex, '');
-    if (t.contains('&')) t = _htmlUnescape.convert(t);
+    t = _HtmlEntities.decode(t);
     return trim ? t.trim() : t;
   }
 

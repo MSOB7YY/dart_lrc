@@ -7,10 +7,10 @@ import 'dart:typed_data';
 
 import 'package:charset/charset.dart';
 import 'package:html_unescape/html_unescape.dart';
-import 'package:xml/xml.dart';
 
 part 'src/core/enums.dart';
 part 'src/core/extensions.dart';
+part 'src/core/html_entities.dart';
 part 'src/core/line_resolver.dart';
 part 'src/models/lrc.dart';
 part 'src/models/lrc_line.dart';

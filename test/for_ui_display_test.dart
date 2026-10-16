@@ -68,7 +68,7 @@ void main() {
     test('words running past the start of a plain line do not hide it', () {
       const content = '<tt><body><div>'
           '<p begin="00:05.000" end="00:10.400"><span begin="00:05.000" end="00:07.000">I</span> <span begin="00:07.000" end="00:10.400">know</span></p>'
-          '<p begin="00:10.000" end="00:11.500"><span begin="00:10.000" end="00:11.500">Yeah!</span></p>'
+          '<p begin="00:10.000" end="00:11.500">Yeah!</p>'
           '<p begin="00:20.000" end="00:22.000"><span begin="00:20.000" end="00:21.000">next</span> <span begin="00:21.000" end="00:22.000">line</span></p>'
           '</div></body></tt>';
       final ui = TtmlParser.parse(content).forUiDisplay(0);

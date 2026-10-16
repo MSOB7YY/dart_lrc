@@ -129,8 +129,7 @@ class QrcParser {
     final closingQuoteIndex = content.lastIndexOf('"');
     final contentEnd = closingQuoteIndex > contentStart ? closingQuoteIndex : content.length;
     final lyricContent = content.substring(contentStart, contentEnd);
-    if (!lyricContent.contains('&')) return lyricContent;
-    return SubtitleParser._htmlUnescape.convert(lyricContent);
+    return _HtmlEntities.decode(lyricContent);
   }
 
   static _ScannedQrcTiming _findLineTiming(String line) {

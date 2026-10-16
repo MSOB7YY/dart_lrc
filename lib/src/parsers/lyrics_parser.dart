@@ -110,8 +110,6 @@ enum _LyricsFormat {
 
   /// Null when [content] is not of this format or has no lines.
   Lrc? tryParse(String content) {
-    // -- not [TtmlParser.isValid], its xml extractor reads `<p>` elements that check misses
-    if (this == _LyricsFormat.ttml && !content.contains('begin')) return null;
     try {
       final lrc = switch (this) {
         _LyricsFormat.lrc => LrcParser.parse(content),

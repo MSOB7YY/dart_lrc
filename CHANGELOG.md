@@ -1,3 +1,12 @@
+## 2.4.0
+
+- `TtmlParser` is a single pass scanner now, ~2-5x faster and ~30x for lrc text inside `<p>`, the `xml` dependency is gone
+- TTML agents (`ttm:agent` on `<p>` or `<div>`) are persons, background vocals (`x-bg`) are lines
+- TTML translations and romanizations (`x-translation`, `x-roman`, head `<translations>`/`<transliterations>`) are lines sharing their line's timestamp
+- TTML syllables are no longer split by spaces, and every time expression is read (`h`, `m`, `s`, `ms`, frames, ticks)
+- TTML metadata fills title, artist, album, songwriters, language and length
+- Html entities in TTML, QRC and subtitles are decoded without `HtmlUnescape` unless needed (~200x faster)
+
 ## 2.3.1
 
 - `LyricsParser` parses any supported format, guessing it from the content so only its parser runs, plain text is rejected in a single pass (~50x faster than trying every parser)
